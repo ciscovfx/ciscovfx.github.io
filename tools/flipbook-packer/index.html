@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flipbook Packer v1.0</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        :root{
+            --bg:#1a1a1a;--surface:#242424;--surface-2:#2d2d2d;--border:#3a3a3a;
+            --text:#e8e8e8;--text-muted:#a0a0a0;--text-dim:#686868;
+            --r:#f04040;--g:#4ec94e;--b:#4d9ef5;--a:#c0c0c0;
+            --accent:#e8a020;--font-display:'Syne',sans-serif;--font-mono:'DM Mono',monospace;
+        }
+        *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:var(--font-mono);background:var(--bg);color:var(--text);height:100vh;overflow:hidden;font-size:13px}
+
+        .app{display:grid;grid-template-columns:320px 1fr;grid-template-rows:48px 1fr 42px;height:100vh}
+        .header{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding:0 18px;border-bottom:1px solid var(--border);background:var(--surface)}
+        .header-left{display:flex;align-items:center;gap:12px}
+        .header h1{font-family:var(--font-display);font-size:15px;font-weight:800;letter-spacing:.06em}
+        .header h1 .hl{color:var(--accent)}
+        .badge{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);padding:2px 8px;border:1px solid rgba(232,160,32,.35);border-radius:3px;background:rgba(232,160,32,.08)}
+        .header-right{display:flex;align-items:center;gap:6px}
+
+        .btn{font-family:var(--font-mono);font-size:10px;letter-spacing:.04em;padding:5px 11px;border:1px solid var(--border);border-radius:3px;background:var(--surface-2);color:var(--text-muted);cursor:pointer;transition:all .2s;white-space:nowrap;display:inline-flex;align-items:center;gap:4px}
+        .btn:hover{border-color:var(--accent);color:var(--accent)}
+        .btn:disabled{opacity:.4;cursor:default;pointer-events:none}
+        .btn-primary{background:var(--accent);color:#1a1a1a;border-color:var(--accent);font-weight:500}
+        .btn-primary:hover{background:#f5b840;border-color:#f5b840;color:#1a1a1a}
+        .btn-sm{padding:3px 7px;font-size:9px}
+        .btn-icon{width:26px;height:26px;padding:0;justify-content:center;font-size:13px}
+        .btn-danger{border-color:rgba(240,64,64,.4);color:var(--r)}
+        .btn-danger:hover{background:rgba(240,64,64,.12);border-color:var(--r);color:var(--r)}
+
+        .left-panel{grid-column:1;grid-row:2;border-right:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;overflow:hidden}
+
+        .config-section{padding:12px 14px;border-bottom:1px solid var(--border);flex-shrink:0}
+        .section-title{font-family:var(--font-display);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px}
+        .grid-selector{display:flex;flex-direction:column;gap:8px}
+        .grid-row{display:flex;align-items:center;gap:6px}
+        .grid-label{font-size:9px;color:var(--text-muted);min-width:32px;flex-shrink:0}
+        .grid-input{font-family:var(--font-mono);font-size:11px;width:46px;padding:3px 6px;text-align:center;border:1px solid var(--border);border-radius:3px;background:var(--surface-2);color:var(--text);outline:none;-moz-appearance:textfield}
+        .grid-input::-webkit-inner-spin-button,.grid-input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+        .grid-input:focus{border-color:var(--accent)}
+        .grid-sep{color:var(--text-dim);font-size:13px}
+        .grid-total{font-size:10px;color:var(--accent);font-weight:500;margin-left:auto}
+
+        .presets-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:3px;margin-top:4px}
+        .preset-btn{font-family:var(--font-mono);font-size:9px;padding:2px 0;border:1px solid var(--border);border-radius:3px;background:var(--surface-2);color:var(--text-muted);cursor:pointer;transition:all .15s;letter-spacing:.02em;text-align:center}
+        .preset-btn:hover,.preset-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(232,160,32,.08)}
+
+        .frame-size-row{display:flex;align-items:center;gap:6px}
+        .frame-size-row .grid-input{width:52px;-moz-appearance:textfield}
+        .frame-size-row .grid-input::-webkit-inner-spin-button,.frame-size-row .grid-input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+        .lock-btn{width:22px;height:22px;border:1px solid var(--border);border-radius:3px;background:var(--surface-2);color:var(--text-dim);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:border-color .35s ease-out,color .35s ease-out;line-height:1}
+        .lock-btn.locked{border-color:var(--accent);color:var(--accent);transition:none}
+        .lock-btn:not(.locked):hover{border-color:var(--text-dim);color:var(--text-muted)}
+
+        .fill-row{display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap}
+        .fill-select{font-family:var(--font-mono);font-size:10px;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--surface-2);color:var(--text);cursor:pointer;outline:none}
+        .fill-select:focus{border-color:var(--accent)}
+        .fill-custom{display:none;align-items:center;gap:4px}
+        .fill-custom.visible{display:flex}
+        .fill-custom input[type=color]{width:22px;height:22px;border:1px solid var(--border);border-radius:3px;padding:0;cursor:pointer;background:var(--surface-2)}
+        .fill-custom input[type=color]::-webkit-color-swatch-wrapper{padding:2px}
+        .fill-custom input[type=color]::-webkit-color-swatch{border-radius:2px;border:none}
+        .fill-hex{font-family:var(--font-mono);font-size:10px;width:62px;padding:2px 4px;border:1px solid var(--border);border-radius:3px;background:var(--surface-2);color:var(--text);outline:none;text-align:center}
+        .fill-hex:focus{border-color:var(--accent)}
+
+        .frames-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px 6px;flex-shrink:0}
+        .frames-count{font-family:var(--font-display);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted)}
+        .frames-count span{color:var(--accent);font-weight:500;font-family:var(--font-mono);letter-spacing:0}
+        .frames-actions{display:flex;gap:4px}
+
+        .frames-list{flex:1;overflow-y:auto;padding:4px 8px 8px}
+        .frames-list::-webkit-scrollbar{width:4px}
+        .frames-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+        .drop-zone{border:2px dashed var(--border);border-radius:6px;padding:24px 16px;text-align:center;cursor:pointer;transition:all .2s;margin:6px 6px 4px}
+        .drop-zone:hover,.drop-zone.dragover{border-color:var(--accent);background:rgba(232,160,32,.04)}
+        .drop-zone-icon{font-size:22px;margin-bottom:6px;opacity:.5}
+        .drop-zone-text{font-size:10px;color:var(--text-muted);line-height:1.6}
+        .drop-cta{color:var(--accent);font-weight:600}
+
+        .frame-item{display:flex;align-items:center;gap:4px;padding:5px 6px;border:1px solid var(--border);border-radius:4px;margin-bottom:3px;background:var(--surface-2);transition:margin .15s,padding .15s,background .15s,border-color .15s,opacity .15s;user-select:none;-webkit-user-select:none;touch-action:none;position:relative}
+        .frame-item.drag-over-top{margin-top:12px}
+        .frame-item.drag-over-top::before{content:'';position:absolute;top:-7px;left:0;right:0;height:2px;background:var(--accent);border-radius:1px}
+        .frame-item.drag-over-bot{margin-bottom:12px}
+        .frame-item.drag-over-bot::after{content:'';position:absolute;bottom:-7px;left:0;right:0;height:2px;background:var(--accent);border-radius:1px}
+        .frame-item.dragging{opacity:.25;background:var(--surface)}
+        @keyframes frame-flash{0%{border-color:var(--accent);box-shadow:0 0 8px rgba(232,160,32,.35)}100%{border-color:var(--border);box-shadow:none}}
+        .frame-flash{animation:frame-flash 1s ease-out forwards}
+
+        .grip{display:flex;flex-direction:column;gap:1.5px;cursor:grab;padding:6px 4px;flex-shrink:0;opacity:.5;transition:opacity .15s;touch-action:none;-webkit-user-select:none;user-select:none}
+        .grip:active{cursor:grabbing}
+        .frame-item:hover .grip{opacity:1}
+        .grip-bar{width:10px;height:2px;background:var(--accent);border-radius:1px}
+        body.is-dragging{cursor:grabbing!important;-webkit-user-select:none!important;user-select:none!important}
+        body.is-dragging *{cursor:grabbing!important}
+
+        .frame-thumb{width:36px;height:36px;border-radius:3px;object-fit:cover;background:#111;border:1px solid var(--border);flex-shrink:0;image-rendering:pixelated;pointer-events:none;user-select:none;-webkit-user-drag:none}
+        .frame-info{flex:1;min-width:0}
+        .frame-name{font-size:9px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px}
+        .frame-dim{font-size:9px;color:var(--text-dim)}
+        .frame-idx{font-size:9px;color:var(--text-dim);min-width:20px;text-align:center;flex-shrink:0}
+        .frame-del{width:20px;height:20px;border:none;background:none;color:var(--text-dim);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;border-radius:3px;flex-shrink:0;line-height:1}
+        .frame-del:hover{color:var(--r);background:rgba(240,64,64,.1)}
+
+        .scale-group{display:flex;align-items:center;gap:1px;flex-shrink:0}
+        .scale-btn{width:18px;height:18px;border-radius:50%;border:1px solid var(--border);background:var(--surface-2);color:var(--text-muted);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;line-height:1;transition:all .15s;padding:0}
+        .scale-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(232,160,32,.08)}
+        .scale-btn:active{background:rgba(232,160,32,.18)}
+        .scale-val{font-family:var(--font-mono);font-size:9px;color:var(--accent);font-weight:500;min-width:22px;text-align:center;cursor:text;outline:none;padding:1px 2px;border:1px solid transparent;border-radius:3px;background:transparent;-webkit-user-select:text;user-select:text}
+        .scale-val:focus{border-color:var(--accent);background:var(--surface-2)}
+
+        .drag-clone{position:fixed;z-index:10000;pointer-events:none;opacity:.88;box-shadow:0 4px 16px rgba(232,160,32,0.25);border:1px solid var(--accent);border-radius:4px;background:var(--surface-2)}
+
+        .inline-warn{margin-top:8px;padding:6px 8px;border:1px solid rgba(240,64,64,.45);border-radius:4px;background:rgba(232,160,32,.08);font-size:10px;color:var(--accent);line-height:1.4;align-items:center;gap:6px;display:none}
+        .inline-warn.visible{display:flex}
+        .inline-warn .iw-text{flex:1}
+        .inline-warn .iw-dismiss{font-family:var(--font-mono);font-size:9px;padding:1px 6px;border:1px solid rgba(240,64,64,.4);border-radius:3px;background:transparent;color:var(--accent);cursor:pointer;flex-shrink:0}
+        .inline-warn .iw-dismiss:hover{background:rgba(232,160,32,.15)}
+
+        .preview-panel{grid-column:2;grid-row:2;display:flex;flex-direction:column;background:var(--bg);overflow:hidden}
+        .preview-toolbar{display:flex;align-items:center;justify-content:space-between;padding:6px 14px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;gap:12px}
+        .toolbar-label{font-family:var(--font-display);font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted)}
+        .toolbar-center{display:flex;align-items:center;gap:8px}
+        .zoom-group{display:flex;align-items:center;gap:4px}
+        .zoom-pct{font-size:10px;color:var(--text);min-width:36px;text-align:center;cursor:pointer;padding:2px 4px;border:1px solid transparent;border-radius:3px;user-select:none}
+        .zoom-pct:hover{border-color:var(--border)}
+
+        .toggle-row{display:flex;align-items:center;gap:5px;font-size:9px;color:var(--text-muted)}
+        .toggle-row input{accent-color:var(--accent);cursor:pointer;width:12px;height:12px}
+
+        .preview-area{flex:1;position:relative;overflow:hidden;cursor:grab;
+            background-color:#222;
+            background-image:linear-gradient(45deg,#2a2a2a 25%,transparent 25%,transparent 75%,#2a2a2a 75%),linear-gradient(45deg,#2a2a2a 25%,transparent 25%,transparent 75%,#2a2a2a 75%);
+            background-size:14px 14px;background-position:0 0,7px 7px}
+        .preview-area:active{cursor:grabbing}
+        .preview-area canvas{position:absolute;border:1px solid var(--border);transform-origin:0 0}
+        #atlasCanvas{image-rendering:auto}
+        #gridOverlay{image-rendering:pixelated}
+        #gridOverlay{pointer-events:none;border:none!important;background:transparent}
+
+        .pixel-info{position:absolute;bottom:8px;left:8px;font-size:10px;color:var(--text-muted);background:rgba(26,26,26,.92);padding:4px 10px;border-radius:3px;border:1px solid var(--border);pointer-events:none;display:flex;gap:10px}
+
+        .footer{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding:0 14px;border-top:1px solid var(--border);background:var(--surface)}
+        .footer-left{display:flex;align-items:center;gap:10px}
+        .footer-right{display:flex;align-items:center;gap:8px}
+        .res-label{font-size:9px;color:var(--text-muted)}
+        .res-badge{font-size:10px;color:var(--accent);font-weight:500;min-width:90px}
+        .format-select{font-family:var(--font-mono);font-size:10px;padding:4px 6px;border:1px solid var(--border);border-radius:3px;background:var(--surface-2);color:var(--text);cursor:pointer;outline:none}
+        .sg-input{font-family:var(--font-mono);font-size:10px;padding:2px 4px;text-align:center;border:1px solid var(--border);border-radius:3px;background:var(--surface-2);color:var(--text);outline:none}
+        .sg-input:focus{border-color:var(--accent)}
+        .size-toggle{display:flex;align-items:center;gap:3px;font-size:9px;color:var(--accent);cursor:pointer;user-select:none}
+        .size-toggle input{accent-color:var(--accent);cursor:pointer;width:11px;height:11px}
+        .file-est{font-size:9px;color:var(--text-muted);min-width:90px;text-align:right}
+
+        .empty-preview{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;pointer-events:none}
+        .empty-preview .ep-icon{font-size:36px;opacity:.15}
+        .empty-preview .ep-text{font-size:11px;color:var(--text-dim);letter-spacing:.05em}
+    </style>
+</head>
+<body>
+<div class="app">
+
+    <header class="header">
+        <div class="header-left">
+            <h1>Flipbook <span class="hl">PACKER</span></h1>
+            <span class="badge">VFX Texture Tool</span>
+            <span class="badge">v1.0</span>
+        </div>
+        <div class="header-right">
+            <button class="btn btn-danger" id="clearAllBtn">Clear All</button>
+        </div>
+    </header>
+
+    <div class="left-panel">
+
+        <div class="config-section">
+            <div class="section-title">Grid Layout</div>
+            <div class="grid-selector">
+                <div class="grid-row">
+                    <span class="grid-label">Rows</span>
+                    <input type="text" class="grid-input" id="gRows" value="3">
+                    <span class="grid-sep">&times;</span>
+                    <span class="grid-label" style="min-width:40px">Columns</span>
+                    <input type="text" class="grid-input" id="gCols" value="3">
+                    <span class="grid-total" id="gridTotal">9 frames</span>
+                </div>
+                <div class="grid-row">
+                    <span class="grid-label">Presets</span>
+                    <button class="btn btn-sm" id="autoGridBtn" style="margin-left:auto" title="Auto grid for current frames">Auto</button>
+                </div>
+                <div class="presets-grid" id="presetsGrid"></div>
+                <div class="inline-warn" id="gridWarn"><span class="iw-text"></span><button class="iw-dismiss">OK</button></div>
+            </div>
+        </div>
+
+        <div class="config-section">
+            <div class="section-title">Frame Size</div>
+            <div class="frame-size-row">
+                <span class="grid-label">Width</span>
+                <input type="text" class="grid-input" id="fW" value="256" style="width:56px">
+                <span class="grid-sep">&times;</span>
+                <span class="grid-label" style="min-width:36px">Height</span>
+                <input type="text" class="grid-input" id="fH" value="256" style="width:56px">
+                <button class="lock-btn locked" id="lockAR" title="Lock aspect ratio">&#x1F517;</button>
+                <button class="btn btn-sm" id="autoSizeBtn" style="margin-left:auto">Auto</button>
+            </div>
+            <div class="fill-row">
+                <span class="grid-label">Fill</span>
+                <select class="fill-select" id="emptyFill">
+                    <option value="transparent">Transparent</option>
+                    <option value="black" selected>Black</option>
+                    <option value="white">White</option>
+                    <option value="custom">Custom</option>
+                </select>
+                <div class="fill-custom" id="fillCustom">
+                    <input type="color" id="fillColor" value="#000000">
+                    <input type="text" id="fillHex" class="fill-hex" value="#000000" maxlength="7" spellcheck="false">
+                </div>
+            </div>
+            <div class="inline-warn" id="sizeWarn"><span class="iw-text"></span><button class="iw-dismiss">OK</button></div>
+        </div>
+
+        <div class="frames-header">
+            <span class="frames-count">Frames: <span id="frameCount">0</span> / <span id="frameSlots">9</span></span>
+            <div class="frames-actions">
+                <button class="btn btn-sm" id="addFramesBtn">+ Add</button>
+                <button class="btn btn-sm" id="sortAlphaBtn" title="Sort alphabetically">A&rightarrow;Z</button>
+            </div>
+        </div>
+
+        <div class="frames-list" id="framesList">
+            <div class="drop-zone" id="dropZone">
+                <div class="drop-zone-icon">&#x2B07;</div>
+                <div class="drop-zone-text">
+                    <span class="drop-cta">Drop</span> images here or <span class="drop-cta">click Add</span><br>
+                    PNG &middot; JPG &middot; WebP &middot; GIF &middot; BMP
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="preview-panel">
+        <div class="preview-toolbar">
+            <span class="toolbar-label">Preview</span>
+            <div class="toolbar-center">
+                <label class="toggle-row"><input type="checkbox" id="showGrid" checked> Grid overlay</label>
+                <label class="toggle-row"><input type="checkbox" id="showIndex"> Frame index</label>
+            </div>
+            <div class="zoom-group">
+                <button class="btn btn-sm btn-icon" id="zoomOut">&minus;</button>
+                <span class="zoom-pct" id="zoomPct">100%</span>
+                <button class="btn btn-sm btn-icon" id="zoomIn">+</button>
+                <button class="btn btn-sm btn-icon" id="zoomFit" title="Fit to view (F)" style="font-size:10px;letter-spacing:-.06em">[  ]</button>
+            </div>
+        </div>
+        <div class="preview-area" id="previewArea">
+            <canvas id="atlasCanvas"></canvas>
+            <canvas id="gridOverlay"></canvas>
+            <div class="empty-preview" id="emptyPreview">
+                <div class="ep-icon">&#x25A6;</div>
+                <div class="ep-text">Add frames to build the flipbook</div>
+            </div>
+            <div class="pixel-info" id="pixelInfo" style="display:none">
+                <span>Frame <span id="piFrame">&mdash;</span></span>
+                <span style="color:var(--text-dim)" id="piPos"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="footer-left">
+            <span class="res-label">Output</span>
+            <span class="res-badge" id="atlasResBadge">&mdash; &times; &mdash;</span>
+        </div>
+        <div class="footer-right">
+            <span class="file-est" id="fileEst"></span>
+            <input type="text" id="outName" class="sg-input" style="width:150px" placeholder="filename" value="T_Flipbook">
+            <label class="size-toggle" title="Append grid to filename"><input type="checkbox" id="appendGrid" checked> +grid</label>
+            <select class="format-select" id="exportFormat">
+                <option value="png">PNG [Lossless]</option>
+                <option value="tga">TGA [RLE]</option>
+                <option value="exr">EXR [HALF ZIP]</option>
+            </select>
+            <button class="btn btn-primary" id="exportBtn">Export</button>
+        </div>
+    </div>
+
+</div>
+
+<input type="file" id="fileInput" accept="image/*" multiple style="display:none">
+
+<script>
+let frames = [];
+let gCols = 3, gRows = 3;
+let fW = 256, fH = 256;
+let arLocked = true;
+let emptyFill = 'black';
+let customFillColor = '#000000';
+let zoom = 1, panX = 0, panY = 0;
+let isPan = false, psx = 0, psy = 0, ppx = 0, ppy = 0;
+let showGridOverlay = true, showFrameIndex = false;
+let lastExp = null;
+let sizeWarnDismissed = false;
+
+const atlasC  = document.getElementById('atlasCanvas');
+const atlasX  = atlasC.getContext('2d');
+const overlayC = document.getElementById('gridOverlay');
+const overlayX = overlayC.getContext('2d');
+
+document.addEventListener('dragstart', function(e) {
+    if (e.target.closest && e.target.closest('.drop-zone')) return;
+    e.preventDefault();
+    return false;
+});
+
+const PRESETS = [];
+for (let r = 1; r <= 6; r++)
+    for (let c = 1; c <= 6; c++)
+        PRESETS.push([r, c]);
+
+function buildPresets() {
+    const grid = document.getElementById('presetsGrid');
+    PRESETS.forEach(([r, c]) => {
+        const b = document.createElement('button');
+        b.className = 'preset-btn';
+        b.textContent = r + '\u00D7' + c;
+        b.dataset.r = r; b.dataset.c = c;
+        b.addEventListener('click', () => setGrid(c, r));
+        grid.appendChild(b);
+    });
+}
+function setGrid(c, r) {
+    gCols = Math.max(1, Math.min(64, c));
+    gRows = Math.max(1, Math.min(64, r));
+    document.getElementById('gCols').value = gCols;
+    document.getElementById('gRows').value = gRows;
+    updateGridUI();
+    buildAtlas();
+}
+function updateGridUI() {
+    const total = gCols * gRows;
+    document.getElementById('gridTotal').textContent = total + ' frames';
+    document.getElementById('frameSlots').textContent = total;
+    document.querySelectorAll('.preset-btn').forEach(b => {
+        b.classList.toggle('active', +b.dataset.c === gCols && +b.dataset.r === gRows);
+    });
+    document.getElementById('atlasResBadge').textContent =
+        (gCols * fW) + ' \u00D7 ' + (gRows * fH);
+    updateEstimate();
+    checkGridOverflow();
+}
+
+// FIX BUG 1: adjusted scoring coefficients (3→5, 1→2)
+function autoGrid(n) {
+    if (n <= 0) return [3, 3];
+    let bestC = n, bestR = 1, bestScore = Infinity;
+    for (let c = 1; c <= n; c++) {
+        const r = Math.ceil(n / c);
+        if (c * r > n * 2) continue;
+        const squareness = Math.abs(c - r);
+        const waste = c * r - n;
+        const score = squareness * 5 + waste * 2;
+        if (score < bestScore || (score === bestScore && c >= r)) {
+            bestScore = score;
+            bestC = c;
+            bestR = r;
+        }
+    }
+    return [bestC, bestR];
+}
+
+function updateFrameSize(from) {
+    if (arLocked && frames.length > 0) {
+        const img = frames[0].img;
+        if (img.naturalWidth && img.naturalHeight) {
+            const ar = img.naturalWidth / img.naturalHeight;
+            if (from === 'w') fH = Math.max(1, Math.round(fW / ar));
+            else              fW = Math.max(1, Math.round(fH * ar));
+        }
+    }
+    document.getElementById('fW').value = fW;
+    document.getElementById('fH').value = fH;
+    document.getElementById('atlasResBadge').textContent =
+        (gCols * fW) + ' \u00D7 ' + (gRows * fH);
+    updateEstimate();
+    buildAtlas();
+}
+function autoSize() {
+    if (!frames.length) return;
+    const map = {};
+    frames.forEach(f => {
+        const k = f.img.naturalWidth + 'x' + f.img.naturalHeight;
+        map[k] = (map[k] || 0) + 1;
+    });
+    const best = Object.entries(map).sort((a,b) => b[1]-a[1])[0][0].split('x');
+    fW = +best[0]; fH = +best[1];
+    document.getElementById('fW').value = fW;
+    document.getElementById('fH').value = fH;
+    updateGridUI();
+    buildAtlas();
+}
+
+function checkGridOverflow() {
+    const el = document.getElementById('gridWarn');
+    const total = gCols * gRows;
+    if (frames.length > total) {
+        el.querySelector('.iw-text').textContent =
+            '\u26A0 ' + total + ' grid slots \u2014 ' + (frames.length - total) + ' frames not shown';
+        el.classList.add('visible');
+    } else {
+        el.classList.remove('visible');
+    }
+}
+
+function checkSizeMismatch() {
+    const el = document.getElementById('sizeWarn');
+    if (!frames.length) { el.classList.remove('visible'); sizeWarnDismissed = false; return; }
+    let allSame = true;
+    for (let i = 1; i < frames.length; i++) {
+        if (frames[i].img.naturalWidth !== frames[0].img.naturalWidth ||
+            frames[i].img.naturalHeight !== frames[0].img.naturalHeight) {
+            allSame = false; break;
+        }
+    }
+    if (allSame) { el.classList.remove('visible'); sizeWarnDismissed = false; return; }
+    if (sizeWarnDismissed) return;
+    el.querySelector('.iw-text').textContent =
+        '\u26A0 Mixed resolutions \u2014 scaled to ' + fW + '\u00D7' + fH;
+    el.classList.add('visible');
+}
+
+document.querySelectorAll('.inline-warn .iw-dismiss').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const warnEl = btn.closest('.inline-warn');
+        warnEl.classList.remove('visible');
+        if (warnEl.id === 'sizeWarn') sizeWarnDismissed = true;
+    });
+});
+
+function loadFiles(files) {
+    const imgs = [...files].filter(f => f.type.startsWith('image/'));
+    if (!imgs.length) return;
+    let loaded = 0;
+        const newFrames = [];
+    function finishLoad() {
+        if (loaded < imgs.length) return;
+        if (!newFrames.length) return;
+        newFrames.sort((a,b) => a.name.localeCompare(b.name, undefined, {numeric:true, sensitivity:'base'}));
+        frames.push(...newFrames);
+        sizeWarnDismissed = false;
+        if (frames.length === newFrames.length) autoSize();
+        const [c, r] = autoGrid(frames.length);
+        setGrid(c, r);
+        checkSizeMismatch();
+        renderFrameList();
+        buildAtlas();
+        updateGridUI();
+        requestAnimationFrame(() => zFit());
+    }
+    imgs.forEach(file => {
+        const img = new Image();
+        img.onload = () => {
+            URL.revokeObjectURL(img.src);
+            const tc = document.createElement('canvas');
+            tc.width = 72; tc.height = 72;
+            const tx = tc.getContext('2d');
+            const sc = Math.min(72/img.naturalWidth, 72/img.naturalHeight);
+            const tw = img.naturalWidth * sc, th = img.naturalHeight * sc;
+            tx.drawImage(img, (72-tw)/2, (72-th)/2, tw, th);
+            newFrames.push({ img, name: file.name, w: img.naturalWidth, h: img.naturalHeight, thumb: tc.toDataURL(), scale: 100 });
+            loaded++;
+            finishLoad();
+        };
+        img.onerror = () => {
+            URL.revokeObjectURL(img.src);
+            loaded++;
+            finishLoad();
+        };
+        img.src = URL.createObjectURL(file);
+    });
+}
+
+let drag = null;
+
+function cleanupDrag() {
+    if (!drag) return;
+    const grip = drag.grip;
+    grip.removeEventListener('pointermove', onGripPointerMove);
+    grip.removeEventListener('pointerup', onGripPointerUp);
+    grip.removeEventListener('pointercancel', onGripPointerUp);
+    try { grip.releasePointerCapture(drag.pointerId); } catch(_) {}
+    if (drag.clone && drag.clone.parentNode) drag.clone.remove();
+    document.querySelectorAll('.frame-item').forEach(el => {
+        el.classList.remove('drag-over-top', 'drag-over-bot', 'dragging');
+    });
+    document.body.classList.remove('is-dragging');
+    let flashIdx = null;
+    if (drag.overIdx !== null && drag.overIdx !== drag.idx) {
+        const moved = frames.splice(drag.idx, 1)[0];
+        let target = drag.overIdx > drag.idx ? drag.overIdx - 1 : drag.overIdx;
+        if (drag.overSide === 'bot') target++;
+        frames.splice(target, 0, moved);
+        flashIdx = target;
+    }
+    drag = null;
+    renderFrameList();
+    buildAtlas();
+    if (flashIdx !== null) {
+        const el = document.querySelectorAll('.frame-item')[flashIdx];
+        if (el) { el.classList.add('frame-flash'); setTimeout(() => el.classList.remove('frame-flash'), 1000); }
+    }
+}
+
+document.addEventListener('contextmenu', e => { if (drag) e.preventDefault(); });
+window.addEventListener('blur', () => { if (drag) cleanupDrag(); });
+
+function onGripPointerDown(e) {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const grip = e.currentTarget;
+    const item = grip.closest('.frame-item');
+    if (!item) return;
+
+    const idx = +item.dataset.idx;
+    grip.setPointerCapture(e.pointerId);
+    const rect = item.getBoundingClientRect();
+
+    const clone = item.cloneNode(true);
+    clone.className = 'frame-item drag-clone';
+    clone.style.left = rect.left + 'px';
+    clone.style.top = rect.top + 'px';
+    clone.style.width = rect.width + 'px';
+    document.body.appendChild(clone);
+
+    item.classList.add('dragging');
+    document.body.classList.add('is-dragging');
+
+    drag = {
+        pointerId: e.pointerId, grip: grip, idx: idx, item: item,
+        clone: clone, offsetY: e.clientY - rect.top,
+        overIdx: null, overSide: null, moved: false
+    };
+
+    grip.addEventListener('pointermove', onGripPointerMove);
+    grip.addEventListener('pointerup', onGripPointerUp);
+    grip.addEventListener('pointercancel', onGripPointerUp);
+}
+
+function onGripPointerMove(e) {
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    drag.moved = true;
+    drag.clone.style.top = (e.clientY - drag.offsetY) + 'px';
+
+    const list = document.getElementById('framesList');
+    const listRect = list.getBoundingClientRect();
+    const scrollZone = 28;
+    if (e.clientY < listRect.top + scrollZone) list.scrollTop -= 8;
+    else if (e.clientY > listRect.bottom - scrollZone) list.scrollTop += 8;
+
+    document.querySelectorAll('.frame-item.drag-over-top, .frame-item.drag-over-bot').forEach(el => {
+        el.classList.remove('drag-over-top', 'drag-over-bot');
+    });
+
+    const items = document.querySelectorAll('.frame-item:not(.dragging):not(.drag-clone)');
+    let foundIdx = null, foundSide = null;
+
+    if (items.length) {
+        const firstRect = items[0].getBoundingClientRect();
+        const lastRect = items[items.length - 1].getBoundingClientRect();
+
+        if (e.clientY < firstRect.top) {
+            foundIdx = +items[0].dataset.idx;
+            foundSide = 'top';
+            items[0].classList.add('drag-over-top');
+        } else if (e.clientY > lastRect.bottom) {
+            foundIdx = +items[items.length - 1].dataset.idx;
+            foundSide = 'bot';
+            items[items.length - 1].classList.add('drag-over-bot');
+        } else {
+            for (let i = 0; i < items.length; i++) {
+                const el = items[i];
+                const rect = el.getBoundingClientRect();
+                const zoneTop = rect.top - 6;
+                const zoneBot = rect.bottom + 6;
+                if (e.clientY >= zoneTop && e.clientY <= zoneBot) {
+                    foundIdx = +el.dataset.idx;
+                    foundSide = (e.clientY < rect.top + rect.height / 2) ? 'top' : 'bot';
+                    el.classList.add(foundSide === 'top' ? 'drag-over-top' : 'drag-over-bot');
+                    break;
+                }
+            }
+        }
+    }
+
+    drag.overIdx = foundIdx;
+    drag.overSide = foundSide;
+}
+
+function onGripPointerUp(e) {
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    cleanupDrag();
+}
+
+function renderFrameList() {
+    const list = document.getElementById('framesList');
+    [...list.querySelectorAll('.frame-item')].forEach(el => el.remove());
+
+    frames.forEach((f, i) => {
+        const item = document.createElement('div');
+        item.className = 'frame-item';
+        item.dataset.idx = i;
+
+        item.innerHTML =
+            '<div class="grip" title="Drag to reorder"><span class="grip-bar"></span><span class="grip-bar"></span><span class="grip-bar"></span></div>' +
+            '<span class="frame-idx">' + String(i).padStart(2,'0') + '</span>' +
+            '<img class="frame-thumb" src="' + f.thumb + '" alt="" draggable="false">' +
+            '<div class="frame-info">' +
+                '<div class="frame-name" title="' + f.name + '">' + f.name + '</div>' +
+                '<div class="frame-dim">' + f.w + ' \u00D7 ' + f.h + '</div>' +
+            '</div>' +
+            '<div class="scale-group">' +
+                '<button class="scale-btn" data-scale-minus="' + i + '" title="Scale -5% (Shift: -1%)" tabindex="-1">\u2212</button>' +
+                '<span class="scale-val" contenteditable="true" data-scale-val="' + i + '" title="Scale % from center">' + f.scale + '</span>' +
+                '<button class="scale-btn" data-scale-plus="' + i + '" title="Scale +5% (Shift: +1%)" tabindex="-1">+</button>' +
+            '</div>' +
+            '<button class="frame-del" data-del="' + i + '" title="Remove">\u2715</button>';
+
+        const grip = item.querySelector('.grip');
+        grip.addEventListener('pointerdown', onGripPointerDown);
+
+        item.querySelector('[data-scale-minus]').addEventListener('click', e => {
+            e.stopPropagation();
+            const idx = +e.currentTarget.dataset.scaleMinus;
+            const step = e.shiftKey ? 1 : 5;
+            frames[idx].scale = Math.max(1, Math.min(400, frames[idx].scale - step));
+            item.querySelector('.scale-val').textContent = frames[idx].scale;
+            buildAtlas();
+        });
+
+        item.querySelector('[data-scale-plus]').addEventListener('click', e => {
+            e.stopPropagation();
+            const idx = +e.currentTarget.dataset.scalePlus;
+            const step = e.shiftKey ? 1 : 5;
+            frames[idx].scale = Math.max(1, Math.min(400, frames[idx].scale + step));
+            item.querySelector('.scale-val').textContent = frames[idx].scale;
+            buildAtlas();
+        });
+
+        const valEl = item.querySelector('.scale-val');
+        valEl.addEventListener('blur', e => {
+            e.stopPropagation();
+            const idx = +e.currentTarget.dataset.scaleVal;
+            const v = evalMath(e.currentTarget.textContent);
+            frames[idx].scale = isNaN(v) ? 100 : Math.max(1, Math.min(400, Math.round(v)));
+            e.currentTarget.textContent = frames[idx].scale;
+            buildAtlas();
+        });
+        valEl.addEventListener('keydown', e => {
+            if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); }
+            if (e.key === 'Escape') { e.currentTarget.textContent = frames[+e.currentTarget.dataset.scaleVal].scale; e.currentTarget.blur(); }
+        });
+        valEl.addEventListener('pointerdown', e => e.stopPropagation());
+        item.querySelectorAll('.scale-btn').forEach(btn => {
+            btn.addEventListener('pointerdown', e => e.stopPropagation());
+        });
+
+        item.querySelector('.frame-del').addEventListener('click', e => {
+            e.stopPropagation();
+            const idx = +e.currentTarget.dataset.del;
+            frames.splice(idx, 1);
+            checkSizeMismatch();
+            renderFrameList();
+            buildAtlas();
+            updateGridUI();
+        });
+
+        list.appendChild(item);
+    });
+
+    document.getElementById('frameCount').textContent = frames.length;
+}
+
+function getEmptyFillRGBA() {
+    switch (emptyFill) {
+        case 'black':  return [0, 0, 0, 255];
+        case 'white':  return [255, 255, 255, 255];
+        case 'custom': {
+            const r = parseInt(customFillColor.slice(1,3), 16);
+            const g = parseInt(customFillColor.slice(3,5), 16);
+            const b = parseInt(customFillColor.slice(5,7), 16);
+            return [r, g, b, 255];
+        }
+        default:       return [0, 0, 0, 0];
+    }
+}
+
+function buildAtlas() {
+    const aw = gCols * fW, ah = gRows * fH;
+    atlasC.width = aw; atlasC.height = ah;
+
+    const fill = getEmptyFillRGBA();
+    if (fill[3] > 0) {
+        atlasX.fillStyle = 'rgba(' + fill[0] + ',' + fill[1] + ',' + fill[2] + ',1)';
+        atlasX.fillRect(0, 0, aw, ah);
+    } else {
+        atlasX.clearRect(0, 0, aw, ah);
+    }
+
+    const total = gCols * gRows;
+    for (let i = 0; i < total; i++) {
+        const col = i % gCols, row = Math.floor(i / gCols);
+        const x = col * fW, y = row * fH;
+        if (i < frames.length) {
+            if (fill[3] === 0) {
+                atlasX.clearRect(x, y, fW, fH);
+            } else {
+                atlasX.fillStyle = 'rgba(' + fill[0] + ',' + fill[1] + ',' + fill[2] + ',1)';
+                atlasX.fillRect(x, y, fW, fH);
+            }
+            const s = (frames[i].scale || 100) / 100;
+            if (s === 1) {
+                atlasX.drawImage(frames[i].img, x, y, fW, fH);
+            } else {
+                const sw = fW * s, sh = fH * s;
+                const sx = x + (fW - sw) / 2, sy = y + (fH - sh) / 2;
+                atlasX.save();
+                atlasX.beginPath();
+                atlasX.rect(x, y, fW, fH);
+                atlasX.clip();
+                atlasX.drawImage(frames[i].img, sx, sy, sw, sh);
+                atlasX.restore();
+            }
+        }
+    }
+
+    drawOverlay();
+    updateEmptyState();
+    updateEstimate();
+    document.getElementById('atlasResBadge').textContent = aw + ' \u00D7 ' + ah;
+}
+
+// FIX BUG 2: imageSmoothingEnabled=false + Math.max(0.5, 1/zoom)
+function drawOverlay() {
+    const aw = gCols * fW, ah = gRows * fH;
+    overlayC.width = aw; overlayC.height = ah;
+    overlayX.clearRect(0, 0, aw, ah);
+    overlayX.imageSmoothingEnabled = false;
+
+    if (showGridOverlay) {
+        overlayX.strokeStyle = 'rgba(232,160,32,0.35)';
+        overlayX.lineWidth = Math.max(0.5, 1 / zoom);
+        overlayX.beginPath();
+        for (let c = 0; c <= gCols; c++) {
+            overlayX.moveTo(c * fW, 0);
+            overlayX.lineTo(c * fW, ah);
+        }
+        for (let r = 0; r <= gRows; r++) {
+            overlayX.moveTo(0, r * fH);
+            overlayX.lineTo(aw, r * fH);
+        }
+        overlayX.stroke();
+
+        overlayX.fillStyle = 'rgba(240,64,64,0.08)';
+        const total = gCols * gRows;
+        for (let i = frames.length; i < total; i++) {
+            const col = i % gCols, row = Math.floor(i / gCols);
+            overlayX.fillRect(col * fW, row * fH, fW, fH);
+        }
+    }
+
+    if (showFrameIndex) {
+        const fs = Math.max(10, Math.min(fW, fH) * 0.18);
+        overlayX.font = 'bold ' + fs + "px 'DM Mono', monospace";
+        overlayX.textAlign = 'center';
+        overlayX.textBaseline = 'middle';
+        const total = gCols * gRows;
+        for (let i = 0; i < Math.min(frames.length, total); i++) {
+            const col = i % gCols, row = Math.floor(i / gCols);
+            const cx = col * fW + fW/2, cy = row * fH + fH/2;
+            overlayX.fillStyle = 'rgba(0,0,0,0.55)';
+            overlayX.fillText(String(i), cx+1, cy+1);
+            overlayX.fillStyle = 'rgba(232,160,32,0.9)';
+            overlayX.fillText(String(i), cx, cy);
+        }
+    }
+}
+
+const pa = document.getElementById('previewArea');
+const zpE = document.getElementById('zoomPct');
+
+function applyTransform() {
+    const t = 'translate(' + panX + 'px,' + panY + 'px) scale(' + zoom + ')';
+    atlasC.style.transform = t;
+    overlayC.style.transform = t;
+    zpE.textContent = Math.round(zoom * 100) + '%';
+}
+function setZoom(z, cx, cy) {
+    const o = zoom;
+    zoom = Math.max(.05, Math.min(8, z));
+    if (cx !== undefined) { panX = cx - (cx - panX) * (zoom/o); panY = cy - (cy - panY) * (zoom/o); }
+    applyTransform();
+    drawOverlay();
+}
+function zFit() {
+    const r = pa.getBoundingClientRect();
+    const aw = gCols * fW, ah = gRows * fH;
+    zoom = Math.min((r.width - 60)/Math.max(aw,1), (r.height - 60)/Math.max(ah,1));
+    panX = (r.width - aw * zoom) / 2;
+    panY = (r.height - ah * zoom) / 2;
+    applyTransform();
+    drawOverlay();
+}
+
+pa.addEventListener('wheel', e => {
+    e.preventDefault();
+    const r = pa.getBoundingClientRect();
+    setZoom(zoom * (e.deltaY < 0 ? 1.12 : 1/1.12), e.clientX - r.left, e.clientY - r.top);
+}, {passive:false});
+
+pa.addEventListener('mousedown', e => {
+    if (drag) return;
+    if (e.button) return;
+    isPan = true; psx = e.clientX; psy = e.clientY; ppx = panX; ppy = panY;
+    pa.style.cursor = 'grabbing';
+});
+
+document.addEventListener('mousemove', e => {
+    if (isPan) {
+        panX = ppx + (e.clientX - psx);
+        panY = ppy + (e.clientY - psy);
+        applyTransform();
+    }
+});
+document.addEventListener('mouseup', e => {
+    if (isPan) {
+        isPan = false;
+        pa.style.cursor = 'grab';
+    }
+});
+
+document.getElementById('zoomIn').addEventListener('click', () => { const r = pa.getBoundingClientRect(); setZoom(zoom*1.25, r.width/2, r.height/2); });
+document.getElementById('zoomOut').addEventListener('click', () => { const r = pa.getBoundingClientRect(); setZoom(zoom/1.25, r.width/2, r.height/2); });
+document.getElementById('zoomFit').addEventListener('click', zFit);
+document.addEventListener('keydown', e => {
+    if (e.key === 'f' && !e.ctrlKey && !e.altKey && !e.metaKey &&
+        !e.target.closest('input, [contenteditable], select, textarea')) {
+        zFit();
+    }
+});
+zpE.addEventListener('click', () => {
+    zoom = 1;
+    const r = pa.getBoundingClientRect(), aw = gCols*fW, ah = gRows*fH;
+    panX = (r.width - aw) / 2; panY = (r.height - ah) / 2;
+    applyTransform();
+});
+
+const piEl = document.getElementById('pixelInfo');
+atlasC.addEventListener('mousemove', e => {
+    const r = atlasC.getBoundingClientRect();
+    const x = Math.floor((e.clientX - r.left) * (atlasC.width / r.width));
+    const y = Math.floor((e.clientY - r.top) * (atlasC.height / r.height));
+    const col = Math.floor(x / fW), row = Math.floor(y / fH);
+    const idx = row * gCols + col;
+    piEl.style.display = 'flex';
+    document.getElementById('piFrame').textContent = idx < frames.length ? idx + ' \u2014 ' + frames[idx].name : idx + ' (empty)';
+    document.getElementById('piPos').textContent = x + ', ' + y;
+});
+atlasC.addEventListener('mouseleave', () => { piEl.style.display = 'none'; });
+
+function evalMath(str) {
+    const s = String(str).trim();
+    if (!s) return NaN;
+    if (!/^[\d+\-*/().\s]+$/.test(s)) return NaN;
+    try { return new Function('return (' + s + ')')(); } catch(e) { return NaN; }
+}
+document.getElementById('gCols').addEventListener('change', e => {
+    const v = evalMath(e.target.value);
+    gCols = Math.max(1, Math.min(64, isNaN(v) ? gCols : Math.round(v)));
+    e.target.value = gCols;
+    updateGridUI(); buildAtlas();
+});
+document.getElementById('gRows').addEventListener('change', e => {
+    const v = evalMath(e.target.value);
+    gRows = Math.max(1, Math.min(64, isNaN(v) ? gRows : Math.round(v)));
+    e.target.value = gRows;
+    updateGridUI(); buildAtlas();
+});
+document.getElementById('fW').addEventListener('change', e => {
+    const v = evalMath(e.target.value);
+    fW = Math.max(1, Math.min(4096, isNaN(v) ? fW : Math.round(v)));
+    updateFrameSize('w');
+});
+document.getElementById('fH').addEventListener('change', e => {
+    const v = evalMath(e.target.value);
+    fH = Math.max(1, Math.min(4096, isNaN(v) ? fH : Math.round(v)));
+    updateFrameSize('h');
+});
+['gCols','gRows','fW','fH'].forEach(id => {
+    const el = document.getElementById(id);
+    el.addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); });
+    el.addEventListener('focus', () => el.select());
+});
+document.getElementById('lockAR').addEventListener('click', () => {
+    arLocked = !arLocked;
+    const btn = document.getElementById('lockAR');
+    btn.classList.toggle('locked', arLocked);
+});
+document.getElementById('autoSizeBtn').addEventListener('click', () => {
+    autoSize();
+    sizeWarnDismissed = true;
+    document.getElementById('sizeWarn').classList.remove('visible');
+});
+document.getElementById('showGrid').addEventListener('change', e => { showGridOverlay = e.target.checked; drawOverlay(); });
+document.getElementById('showIndex').addEventListener('change', e => { showFrameIndex = e.target.checked; drawOverlay(); });
+
+document.getElementById('emptyFill').addEventListener('change', e => {
+    emptyFill = e.target.value;
+    document.getElementById('fillCustom').classList.toggle('visible', emptyFill === 'custom');
+    buildAtlas();
+});
+document.getElementById('fillColor').addEventListener('input', e => {
+    customFillColor = e.target.value;
+    document.getElementById('fillHex').value = customFillColor;
+    buildAtlas();
+});
+document.getElementById('fillHex').addEventListener('change', e => {
+    let hex = e.target.value.trim();
+    if (!hex.startsWith('#')) hex = '#' + hex;
+    if (/^#[0-9a-fA-F]{6}$/.test(hex)) {
+        customFillColor = hex;
+        document.getElementById('fillColor').value = hex;
+        buildAtlas();
+    } else {
+        e.target.value = customFillColor;
+    }
+});
+
+document.getElementById('autoGridBtn').addEventListener('click', () => {
+    if (!frames.length) return;
+    const [c, r] = autoGrid(frames.length);
+    setGrid(c, r);
+    zFit();
+});
+
+const dz = document.getElementById('dropZone');
+dz.addEventListener('click', () => document.getElementById('fileInput').click());
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+dz.addEventListener('drop', e => {
+    e.preventDefault(); dz.classList.remove('dragover');
+    loadFiles(e.dataTransfer.files);
+});
+document.getElementById('fileInput').addEventListener('change', e => {
+    loadFiles(e.target.files);
+    e.target.value = '';
+});
+document.getElementById('addFramesBtn').addEventListener('click', () => document.getElementById('fileInput').click());
+document.getElementById('sortAlphaBtn').addEventListener('click', () => {
+    frames.sort((a,b) => a.name.localeCompare(b.name, undefined, {numeric:true, sensitivity:'base'}));
+    renderFrameList(); buildAtlas();
+});
+
+document.getElementById('clearAllBtn').addEventListener('click', () => {
+    if (drag) {
+        if (drag.clone && drag.clone.parentNode) drag.clone.remove();
+        document.querySelectorAll('.frame-item').forEach(el => {
+            el.classList.remove('drag-over-top', 'drag-over-bot', 'dragging');
+        });
+        document.body.classList.remove('is-dragging');
+        drag = null;
+    }
+    frames = [];
+    gCols = 3; gRows = 3;
+    document.getElementById('gCols').value = 3;
+    document.getElementById('gRows').value = 3;
+    fW = 256; fH = 256;
+    document.getElementById('fW').value = 256;
+    document.getElementById('fH').value = 256;
+    emptyFill = 'black';
+    document.getElementById('emptyFill').value = 'black';
+    document.getElementById('fillCustom').classList.remove('visible');
+    customFillColor = '#000000';
+    document.getElementById('fillColor').value = '#000000';
+    document.getElementById('fillHex').value = '#000000';
+    arLocked = true;
+    document.getElementById('lockAR').classList.add('locked');
+    sizeWarnDismissed = false;
+    document.getElementById('gridWarn').classList.remove('visible');
+    document.getElementById('sizeWarn').classList.remove('visible');
+    lastExp = null;
+    renderFrameList();
+    buildAtlas();
+    updateGridUI();
+    requestAnimationFrame(() => zFit());
+});
+
+function updateEmptyState() {
+    document.getElementById('emptyPreview').style.display = frames.length ? 'none' : 'flex';
+}
+
+const _ct = new Uint32Array(256);
+for (let i = 0; i < 256; i++) {
+    let c = i;
+    for (let j = 0; j < 8; j++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    _ct[i] = c;
+}
+function crc32(b) { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = _ct[(c ^ b[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+
+async function deflateZlib(data) {
+    const cs = new CompressionStream('deflate');
+    const w = cs.writable.getWriter(); w.write(data); w.close();
+    const r = cs.readable.getReader(); const ch = [];
+    while (true) { const {value, done} = await r.read(); if (done) break; ch.push(value); }
+    const t = ch.reduce((s,c) => s+c.length, 0); const out = new Uint8Array(t); let o = 0;
+    for (const c of ch) { out.set(c, o); o += c.length; }
+    return out;
+}
+
+function pngCk(t, d) {
+    const b = new Uint8Array(4+4+d.length+4), v = new DataView(b.buffer);
+    v.setUint32(0, d.length); b[4]=t.charCodeAt(0); b[5]=t.charCodeAt(1); b[6]=t.charCodeAt(2); b[7]=t.charCodeAt(3);
+    b.set(d, 8); v.setUint32(8+d.length, crc32(b.subarray(4, 8+d.length))); return b;
+}
+async function encPNG(w, h, rgba) {
+    const sig = new Uint8Array([137,80,78,71,13,10,26,10]);
+    const ih = new Uint8Array(13); const v = new DataView(ih.buffer);
+    v.setUint32(0,w); v.setUint32(4,h); v.setUint8(8,8); v.setUint8(9,6);
+    const s = w*4, raw = new Uint8Array(h*(1+s));
+    for (let y = 0; y < h; y++) {
+        const ro = y*(1+s), rd = rgba.subarray(y*s,(y+1)*s);
+        raw[ro] = 1;
+        for (let x = 0; x < s; x++) { const prev = x<4?0:rd[x-4]; raw[ro+1+x] = (rd[x]-prev) & 0xFF; }
+    }
+    const comp = await deflateZlib(raw);
+    const pts = [sig, pngCk('IHDR',ih), pngCk('IDAT',comp), pngCk('IEND',new Uint8Array(0))];
+    const total = pts.reduce((s,p) => s+p.length, 0); const png = new Uint8Array(total); let off = 0;
+    for (const p of pts) { png.set(p, off); off += p.length; }
+    return png;
+}
+
+function encTGA(w, h, rgba) {
+    const pk = []; const tp = w*h; let i = 0;
+    while (i < tp) {
+        const bi = i*4; let rl = 1;
+        while (i+rl < tp && rl < 128) {
+            const n = (i+rl)*4;
+            if (rgba[n]===rgba[bi]&&rgba[n+1]===rgba[bi+1]&&rgba[n+2]===rgba[bi+2]&&rgba[n+3]===rgba[bi+3]) rl++;
+            else break;
+        }
+        if (rl >= 2) { pk.push(0x80|(rl-1), rgba[bi+2], rgba[bi+1], rgba[bi], rgba[bi+3]); i += rl; }
+        else {
+            let nl = 1;
+            while (i+nl < tp && nl < 128) {
+                const c=(i+nl)*4, p=(i+nl-1)*4;
+                if (rgba[c]===rgba[p]&&rgba[c+1]===rgba[p+1]&&rgba[c+2]===rgba[p+2]&&rgba[c+3]===rgba[p+3]) break;
+                nl++;
+            }
+            pk.push(nl-1);
+            for (let j = 0; j < nl; j++) { const px=(i+j)*4; pk.push(rgba[px+2],rgba[px+1],rgba[px],rgba[px+3]); }
+            i += nl;
+        }
+    }
+    const rle = new Uint8Array(pk);
+    const buf = new ArrayBuffer(18+rle.length); const dv = new DataView(buf);
+    dv.setUint8(0,0); dv.setUint8(1,0); dv.setUint8(2,10);
+    dv.setUint16(12,w,true); dv.setUint16(14,h,true); dv.setUint8(16,32); dv.setUint8(17,0x28);
+    new Uint8Array(buf).set(rle, 18); return new Uint8Array(buf);
+}
+
+function f2h(f) {
+    const buf=new ArrayBuffer(4); new Float32Array(buf)[0]=f;
+    const b=new Uint32Array(buf)[0], s=(b>>16)&0x8000, e=(b>>23)&0xFF, m=b&0x7FFFFF;
+    if(e===0xFF) return s|0x7C00|(m?0x200:0);
+    let e16=e-127+15;
+    if(e16>=31) return s|0x7C00;
+    if(e16<=0) { if(e16<-10) return s; const mn=(m|0x800000)>>>(1-e16); return s|((mn>>>13)+((mn>>12)&1)); }
+    let m16=m>>>13; const rem=m&0x1FFF;
+    if(rem>0x1000||(rem===0x1000&&(m16&1))) { m16++; if(m16>0x3FF){m16=0;e16++;} if(e16>=31) return s|0x7C00; }
+    return s|(e16<<10)|m16;
+}
+
+const halfLUT = new Uint16Array(256);
+for (let i = 0; i < 256; i++) halfLUT[i] = f2h(i / 255);
+
+function buildEXRHdr(w,h){
+    const attrs=[];
+    function attr(nm,tp,data){
+        const nB=new TextEncoder().encode(nm+'\0'),tB=new TextEncoder().encode(tp+'\0');
+        const sz=new Uint8Array(4);new DataView(sz.buffer).setUint32(0,data.length,true);
+        const buf=new Uint8Array(nB.length+tB.length+4+data.length);let o=0;
+        buf.set(nB,o);o+=nB.length;buf.set(tB,o);o+=tB.length;buf.set(sz,o);o+=4;buf.set(data,o);attrs.push({nm,buf});
+    }
+    const cd=[];
+    for(const n of['A','B','G','R']){
+        cd.push(...new TextEncoder().encode(n+'\0'));
+        const x=new Uint8Array(16),d=new DataView(x.buffer);
+        d.setInt32(0,1,true);d.setUint8(4,0);d.setInt32(8,1,true);d.setInt32(12,1,true);cd.push(...x);
+    }
+    cd.push(0);
+    attr('channels','chlist',new Uint8Array(cd));attr('compression','compression',new Uint8Array([3]));
+    const box=new Uint8Array(16),bv=new DataView(box.buffer);bv.setInt32(8,w-1,true);bv.setInt32(12,h-1,true);
+    attr('dataWindow','box2i',new Uint8Array(box));attr('displayWindow','box2i',new Uint8Array(box));
+    attr('lineOrder','lineOrder',new Uint8Array([0]));
+    const par=new Uint8Array(4);new DataView(par.buffer).setFloat32(0,1,true);attr('pixelAspectRatio','float',par);
+    attr('screenWindowCenter','v2f',new Uint8Array(8));
+    const sw=new Uint8Array(4);new DataView(sw.buffer).setFloat32(0,1,true);attr('screenWindowWidth','float',sw);
+    attrs.sort((a,b)=>a.nm<b.nm?-1:a.nm>b.nm?1:0);
+    const t=attrs.reduce((s,a)=>s+a.buf.length,0),r=new Uint8Array(t);let o=0;
+    for(const a of attrs){r.set(a.buf,o);o+=a.buf.length;}return r;
+}
+
+async function processEXRBlock(bi, w, h, rgba) {
+    const LPB = 16;
+    const y0 = bi * LPB, y1 = Math.min(y0 + LPB, h), lines = y1 - y0;
+    const scanB = w * 4 * 2, blockB = lines * scanB, halfB = (blockB + 1) >> 1;
+    const raw = new Uint8Array(blockB), cat = new Uint8Array(blockB);
+    let o = 0;
+    for (let y = y0; y < y1; y++) {
+        for (const ci of [3, 2, 1, 0]) {
+            for (let x = 0; x < w; x++) {
+                const v = halfLUT[rgba[(y * w + x) * 4 + ci]];
+                raw[o++] = v & 0xFF;
+                raw[o++] = (v >> 8) & 0xFF;
+            }
+        }
+    }
+    { let t1 = 0, t2 = halfB, i = 0; while (i < blockB) { cat[t1++] = raw[i++]; if (i < blockB) cat[t2++] = raw[i++]; } }
+    { let p = cat[0]; for (let i = 1; i < blockB; i++) { const d = (cat[i] - p + 384) & 0xFF; p = cat[i]; cat[i] = d; } }
+    return { y: y0, data: await deflateZlib(cat) };
+}
+
+async function encEXR(w, h, rgba, onProgress) {
+    const hdr = buildEXRHdr(w, h);
+    const LPB = 16, nBlks = Math.ceil(h / LPB), CONCURRENCY = 4;
+    const blks = new Array(nBlks);
+
+    for (let bi = 0; bi < nBlks; bi += CONCURRENCY) {
+        const batchEnd = Math.min(bi + CONCURRENCY, nBlks);
+        const promises = [];
+        for (let j = bi; j < batchEnd; j++) {
+            promises.push(processEXRBlock(j, w, h, rgba));
+        }
+        const results = await Promise.all(promises);
+        for (let j = 0; j < results.length; j++) {
+            blks[bi + j] = results[j];
+        }
+        if (onProgress) await onProgress(batchEnd / nBlks);
+    }
+
+    let bLen = 0;
+    for (const b of blks) bLen += 8 + b.data.length;
+    const hdrLen = 8 + hdr.length + 1, tblLen = nBlks * 8;
+    const total = hdrLen + tblLen + bLen;
+    const buf = new ArrayBuffer(total), dv = new DataView(buf), by = new Uint8Array(buf);
+    let p = 0;
+    dv.setUint32(p, 20000630, true); p += 4;
+    dv.setUint32(p, 2, true); p += 4;
+    by.set(hdr, p); p += hdr.length; by[p++] = 0;
+    const tblS = p, blkS = tblS + tblLen; let bp = blkS; const off = [];
+    for (let bi = 0; bi < nBlks; bi++) {
+        off[bi] = bp;
+        dv.setInt32(bp, blks[bi].y, true); bp += 4;
+        dv.setInt32(bp, blks[bi].data.length, true); bp += 4;
+        by.set(blks[bi].data, bp); bp += blks[bi].data.length;
+    }
+    p = tblS;
+    for (let bi = 0; bi < nBlks; bi++) {
+        dv.setUint32(p, off[bi], true); p += 4;
+        dv.setUint32(p, 0, true); p += 4;
+    }
+    return new Uint8Array(buf);
+}
+
+function fmtB(b){return b<1024?b+' B':b<1048576?(b/1024).toFixed(1)+' KB':(b/1048576).toFixed(1)+' MB';}
+
+function updateEstimate(){
+    const fmt=document.getElementById('exportFormat').value;
+    const aw=gCols*fW, ah=gRows*fH;
+    const lb={png:'PNG',tga:'TGA',exr:'EXR'};
+    if(lastExp&&lastExp.fmt===fmt&&lastExp.w===aw&&lastExp.h===ah)
+        document.getElementById('fileEst').textContent=lb[fmt]+' \u2014 '+fmtB(lastExp.size);
+    else
+        document.getElementById('fileEst').textContent=lb[fmt];
+}
+document.getElementById('exportFormat').addEventListener('change', updateEstimate);
+
+const yld=()=>new Promise(r=>setTimeout(r,0));
+async function exportFile(){
+    if(!frames.length) return alert('No frames to export.');
+    const btn=document.getElementById('exportBtn');const estEl=document.getElementById('fileEst');
+    btn.textContent='Exporting...';btn.disabled=true;let lastReported=-1;
+    const setP=async p=>{if(p===lastReported)return;lastReported=p;estEl.innerHTML='<span style="color:var(--accent);font-weight:500">Encoding\u2026 '+p+'%</span>';await yld();};
+    const onProgress=async pct=>{const p=5+Math.round(pct*90);if(p-lastReported>=5)await setP(p);};
+
+    try{
+        const aw=gCols*fW, ah=gRows*fH;
+        const fmt=document.getElementById('exportFormat').value;
+        let blob;
+
+        await setP(2);
+        const rgba=atlasX.getImageData(0,0,aw,ah).data;
+        await setP(5);
+
+        if(fmt==='png'){
+            const d=await encPNG(aw,ah,rgba);await setP(95);
+            blob=new Blob([d],{type:'image/png'});
+        }else if(fmt==='tga'){
+            const d=encTGA(aw,ah,rgba);await setP(95);
+            blob=new Blob([d],{type:'application/octet-stream'});
+        }else{
+            const d=await encEXR(aw,ah,rgba,onProgress);
+            await setP(98);
+            blob=new Blob([d],{type:'application/octet-stream'});
+        }
+
+        const appendGrid=document.getElementById('appendGrid').checked;
+        const name=document.getElementById('outName').value||'T_Flipbook';
+        const suffix=appendGrid?'_'+gRows+'x'+gCols:'';
+        const ext={png:'.png',tga:'.tga',exr:'.exr'}[fmt];
+        const a=document.createElement('a');
+        a.href=URL.createObjectURL(blob);
+        a.download=name+suffix+ext;
+        a.click();
+        URL.revokeObjectURL(a.href);
+
+        lastExp={fmt,w:aw,h:ah,size:blob.size};
+        estEl.textContent={png:'PNG',tga:'TGA',exr:'EXR'}[fmt]+' \u2014 '+fmtB(blob.size);
+    }catch(err){
+        alert('Export failed: '+err.message);updateEstimate();
+    }
+    setTimeout(()=>{btn.textContent='Export';btn.disabled=false;},400);
+}
+document.getElementById('exportBtn').addEventListener('click', exportFile);
+
+document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    const el = e.target;
+    if (el.tagName === 'INPUT' && el.type === 'text') {
+        if (el.dataset.orig !== undefined) el.value = el.dataset.orig;
+        el.blur();
+    }
+});
+document.addEventListener('focusin', e => {
+    const el = e.target;
+    if (el.tagName === 'INPUT' && el.type === 'text') el.dataset.orig = el.value;
+});
+
+buildPresets();
+updateGridUI();
+buildAtlas();
+zFit();
+</script>
+</body>
+</html>
