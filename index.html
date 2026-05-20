@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CiscoVFX — Tools</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #1a1a1a;
+            --surface: #242424;
+            --surface-2: #2d2d2d;
+            --border: #3a3a3a;
+            --text: #e8e8e8;
+            --text-muted: #a0a0a0;
+            --text-dim: #686868;
+            --accent: #e8a020;
+            --r: #f04040;
+            --g: #4ec94e;
+            --b: #4d9ef5;
+            --a: #c0c0c0;
+            --font-display: 'Syne', sans-serif;
+            --font-mono: 'DM Mono', monospace;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--font-mono);
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            font-size: 13px;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(ellipse at 15% 30%, rgba(232,160,32,0.04) 0%, transparent 50%),
+                radial-gradient(ellipse at 85% 70%, rgba(77,158,245,0.03) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .page {
+            position: relative;
+            z-index: 1;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 60px 24px 80px;
+        }
+
+        /* HEADER */
+        .site-header {
+            margin-bottom: 64px;
+            opacity: 0;
+            animation: fadeUp 0.6s ease forwards;
+        }
+
+        .site-header h1 {
+            font-family: var(--font-display);
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: .08em;
+            margin-bottom: 8px;
+        }
+
+        .site-header h1 .hl {
+            color: var(--accent);
+        }
+
+        .site-header .subtitle {
+            font-size: 11px;
+            color: var(--text-muted);
+            letter-spacing: .06em;
+        }
+
+        .site-header .badges {
+            display: flex;
+            gap: 6px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            font-size: 9px;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            color: var(--accent);
+            padding: 3px 10px;
+            border: 1px solid rgba(232,160,32,0.3);
+            border-radius: 3px;
+            background: rgba(232,160,32,0.06);
+        }
+
+        /* SECTION TITLE */
+        .section-title {
+            font-family: var(--font-display);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .14em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 18px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+            opacity: 0;
+            animation: fadeUp 0.6s ease forwards;
+            animation-delay: 0.15s;
+        }
+
+        /* CARDS */
+        .tools-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin-bottom: 56px;
+        }
+
+        .tool-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 22px 20px;
+            text-decoration: none;
+            color: var(--text);
+            transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            opacity: 0;
+            animation: fadeUp 0.6s ease forwards;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tool-card:nth-child(1) { animation-delay: 0.25s; }
+        .tool-card:nth-child(2) { animation-delay: 0.35s; }
+
+        .tool-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--accent);
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+
+        .tool-card:hover {
+            border-color: var(--accent);
+            box-shadow: 0 4px 20px rgba(232,160,32,0.1), inset 0 0 30px rgba(232,160,32,0.03);
+            transform: translateY(-2px);
+        }
+
+        .tool-card:hover::before {
+            opacity: 1;
+        }
+
+        .card-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 700;
+            font-family: var(--font-display);
+            letter-spacing: .04em;
+            flex-shrink: 0;
+        }
+
+        .card-icon.rgba-icon {
+            background: rgba(232,160,32,0.12);
+            border: 1px solid rgba(232,160,32,0.25);
+            color: var(--accent);
+        }
+
+        .card-icon.fb-icon {
+            background: rgba(77,158,245,0.12);
+            border: 1px solid rgba(77,158,245,0.25);
+            color: var(--b);
+        }
+
+        .card-head {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .card-title {
+            font-family: var(--font-display);
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: .06em;
+        }
+
+        .card-version {
+            font-size: 9px;
+            color: var(--text-dim);
+            letter-spacing: .08em;
+            margin-left: auto;
+        }
+
+        .card-desc {
+            font-size: 11px;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
+        .card-tags {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+            margin-top: auto;
+        }
+
+        .tag {
+            font-size: 9px;
+            padding: 2px 7px;
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            color: var(--text-dim);
+            letter-spacing: .04em;
+        }
+
+        /* COMING SOON */
+        .coming-card {
+            background: var(--surface);
+            border: 1px dashed var(--border);
+            border-radius: 6px;
+            padding: 22px 20px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            opacity: 0;
+            animation: fadeUp 0.6s ease forwards;
+            animation-delay: 0.45s;
+        }
+
+        .coming-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 6px;
+            border: 1px dashed var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-dim);
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .coming-text {
+            font-size: 11px;
+            color: var(--text-dim);
+            letter-spacing: .04em;
+        }
+
+        .coming-text strong {
+            color: var(--text-muted);
+        }
+
+        /* FOOTER */
+        .site-footer {
+            margin-top: 48px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            opacity: 0;
+            animation: fadeUp 0.6s ease forwards;
+            animation-delay: 0.55s;
+        }
+
+        .footer-left {
+            font-size: 10px;
+            color: var(--text-dim);
+            letter-spacing: .04em;
+        }
+
+        .footer-right a {
+            font-size: 10px;
+            color: var(--text-muted);
+            text-decoration: none;
+            letter-spacing: .04em;
+            transition: color 0.2s;
+        }
+
+        .footer-right a:hover {
+            color: var(--accent);
+        }
+
+        /* ANIMATION */
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 600px) {
+            .tools-grid { grid-template-columns: 1fr; }
+            .page { padding: 40px 16px 60px; }
+            .site-header h1 { font-size: 22px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <header class="site-header">
+            <h1>CISCO<span class="hl">VFX</span></h1>
+            <p class="subtitle">VFX texture tools — browser-based, zero dependencies, free forever</p>
+            <div class="badges">
+                <span class="badge">HTML/CSS/JS</span>
+                <span class="badge">No Server</span>
+                <span class="badge">Offline Ready</span>
+                <span class="badge">100% Free</span>
+            </div>
+        </header>
+
+        <div class="section-title">Tools</div>
+
+        <div class="tools-grid">
+            <a href="tools/rgba-packer/" class="tool-card">
+                <div class="card-head">
+                    <div class="card-icon rgba-icon">RGBA</div>
+                    <span class="card-title">Channel Packer</span>
+                    <span class="card-version">v1.0</span>
+                </div>
+                <p class="card-desc">Pack four grayscale textures into a single RGBA image. Per-channel conversion modes, brightness, invert, and custom resolution control.</p>
+                <div class="card-tags">
+                    <span class="tag">PNG</span>
+                    <span class="tag">TGA</span>
+                    <span class="tag">EXR</span>
+                    <span class="tag">Half-Float</span>
+                </div>
+            </a>
+
+            <a href="tools/flipbook-packer/" class="tool-card">
+                <div class="card-head">
+                    <div class="card-icon fb-icon">FB</div>
+                    <span class="card-title">Flipbook Packer</span>
+                    <span class="card-version">v1.0</span>
+                </div>
+                <p class="card-desc">Arrange image sequences into flipbook spritesheets. Auto-grid, per-frame scale, drag reorder, and grid overlay preview.</p>
+                <div class="card-tags">
+                    <span class="tag">PNG</span>
+                    <span class="tag">TGA</span>
+                    <span class="tag">EXR</span>
+                    <span class="tag">Spritesheet</span>
+                </div>
+            </a>
+        </div>
+
+        <div class="section-title">Coming Soon</div>
+
+        <div class="coming-card">
+            <div class="coming-icon">+</div>
+            <span class="coming-text"><strong>More tools in development</strong> — Normal map utilities, texture converters, and UE5 material helpers</span>
+        </div>
+
+        <footer class="site-footer">
+            <span class="footer-left">Built by hand. No frameworks. No tracking.</span>
+            <span class="footer-right">
+                <a href="https://github.com/ciscovfx" target="_blank">GitHub</a>
+            </span>
+        </footer>
+    </div>
+</body>
+</html>
