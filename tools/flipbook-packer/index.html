@@ -16,7 +16,7 @@
         *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
         body{font-family:var(--font-mono);background:var(--bg);color:var(--text);height:100vh;overflow:hidden;font-size:13px}
 
-        .app{display:grid;grid-template-columns:320px 1fr;grid-template-rows:48px 1fr 42px;height:100vh}
+        .app{display:grid;grid-template-columns:330px 1fr;grid-template-rows:48px 1fr 42px;height:100vh}
         .header{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding:0 18px;border-bottom:1px solid var(--border);background:var(--surface)}
         .header-left{display:flex;align-items:center;gap:12px}
         .header h1{font-family:var(--font-display);font-size:15px;font-weight:800;letter-spacing:.06em}
@@ -151,7 +151,7 @@
         .footer-right{display:flex;align-items:center;gap:8px}
         .res-label{font-size:9px;color:var(--text-muted)}
         .res-badge{font-size:10px;color:var(--accent);font-weight:500;min-width:100px}
-        .res-val{color:var(--text)}.res-x{color:var(--accent)}.res-unit{color:var(--text)}
+        .res-val{color:var(--text)}.res-x{color:var(--accent)}.res-unit{color:var(--text-dim)}
         .format-select{font-family:var(--font-mono);font-size:10px;padding:4px 6px;border:1px solid var(--border);border-radius:3px;background:var(--surface-2);color:var(--text);cursor:pointer;outline:none}
         .sg-input{font-family:var(--font-mono);font-size:10px;padding:2px 4px;text-align:center;border:1px solid var(--border);border-radius:3px;background:var(--surface-2);color:var(--text);outline:none}
         .sg-input:focus{border-color:var(--accent)}
@@ -263,7 +263,7 @@
             <div class="drop-zone" id="dropZone">
                 <div class="drop-zone-icon">&#x2B07;</div>
                 <div class="drop-zone-text">
-                    <span class="drop-cta">Drop</span> images here or <span class="drop-cta">click Add</span><br>
+                    <span class="drop-cta">Drop</span> images here or click<span class="drop-cta"> + Add</span><br>
                     PNG &middot; JPG &middot; WebP &middot; GIF &middot; BMP
                 </div>
             </div>
@@ -290,7 +290,7 @@
             <canvas id="gridOverlay"></canvas>
             <div class="empty-preview" id="emptyPreview">
                 <div class="ep-icon">&#x25A6;</div>
-                <div class="ep-text">Add frames to build the flipbook</div>
+                <div class="ep-text">Add images into the flipbook frames</div>
             </div>
             <div class="pixel-info" id="pixelInfo" style="display:none">
                 <span>Frame <span id="piFrame">&mdash;</span></span>
@@ -302,7 +302,7 @@
     <div class="footer">
         <div class="footer-left">
             <span class="res-label">Output</span>
-            <span class="res-badge" id="atlasResBadge"><span class="res-val">&mdash;</span> <span class="res-x">&times;</span> <span class="res-val">&mdash;</span> <span class="res-unit">px</span></span>
+            <span class="res-badge" id="atlasResBadge"><span class="res-val">&mdash;</span><span class="res-unit"> px</span> <span class="res-x">&times;</span> <span class="res-val">&mdash;</span><span class="res-unit"> px</span></span>
         </div>
         <div class="footer-right">
             <span class="file-est" id="fileEst"></span>
@@ -347,7 +347,7 @@ const MAX_ATLAS = 12288;
 function showAtlasWarn() {
     const el = document.getElementById('atlasWarn');
     el.querySelector('.iw-text').textContent =
-        '\u26A0 Output limit ' + MAX_ATLAS + 'px per axis. Frame size capped to ' + fW + '\u00D7' + fH + ' px.';
+        '\u26A0 Output limit ' + MAX_ATLAS + 'px per axis. Frame size capped to ' + fW + '\u00D7' + fH + 'px.';
     el.classList.add('visible');
 }
 
@@ -406,9 +406,10 @@ function updateGridUI() {
     });
     document.getElementById('atlasResBadge').innerHTML =
     '<span class="res-val">' + (gCols * fW) + '</span>' +
+    '<span class="res-unit"> px</span>' +
     ' <span class="res-x">\u00D7</span> ' +
     '<span class="res-val">' + (gRows * fH) + '</span>' +
-    ' <span class="res-unit">px</span>';
+    '<span class="res-unit"> px</span>';
     checkAtlasLimit();
     updateEstimate();
     checkGridOverflow();
@@ -451,9 +452,10 @@ function updateFrameSize(from) {
     document.getElementById('fH').value = fH;
     document.getElementById('atlasResBadge').innerHTML =
     '<span class="res-val">' + (gCols * fW) + '</span>' +
+    '<span class="res-unit"> px</span>' +
     ' <span class="res-x">\u00D7</span> ' +
     '<span class="res-val">' + (gRows * fH) + '</span>' +
-    ' <span class="res-unit">px</span>';
+    '<span class="res-unit"> px</span>';
     updateEstimate();
     buildAtlas();
     requestAnimationFrame(() => zFit());
@@ -817,9 +819,10 @@ function buildAtlas() {
     updateEstimate();
     document.getElementById('atlasResBadge').innerHTML =
     '<span class="res-val">' + (gCols * fW) + '</span>' +
+    '<span class="res-unit"> px</span>' +
     ' <span class="res-x">\u00D7</span> ' +
     '<span class="res-val">' + (gRows * fH) + '</span>' +
-    ' <span class="res-unit">px</span>';
+    '<span class="res-unit"> px</span>';
 }
 
 function drawOverlay() {
@@ -856,14 +859,15 @@ function drawOverlay() {
             overlayX.lineTo(x1, y);
         }
         overlayX.stroke();
-
-        overlayX.fillStyle = 'rgba(240,64,64,0.08)';
-        const total = gCols * gRows;
-        for (let i = frames.length; i < total; i++) {
-            const col = i % gCols, row = Math.floor(i / gCols);
-            const rx = panX + col * fW * zoom;
-            const ry = panY + row * fH * zoom;
-            overlayX.fillRect(rx, ry, fW * zoom, fH * zoom);
+        if (frames.length === 0) {
+            overlayX.fillStyle = 'rgba(240,64,64,0.06)';
+            const total = gCols * gRows;
+            for (let i = frames.length; i < total; i++) {
+                const col = i % gCols, row = Math.floor(i / gCols);
+                const rx = panX + col * fW * zoom;
+                const ry = panY + row * fH * zoom;
+                overlayX.fillRect(rx, ry, fW * zoom, fH * zoom);
+            }
         }
     }
 
