@@ -16,7 +16,7 @@ When I started in VFX, these were the kinds of simple tools I needed. Had to do 
 
 ## How to use
 
-Go to [ciscovfx.github.io](https://ciscovfx.github.io), pick a tool, drop your files, export. Everything runs locally in your browser — your files never leave your machine.
+Go to [ciscovfx.github.io](https://ciscovfx.github.io), pick a tool, drop your files, export. Everything runs locally in your browser, your files never leave your machine.
 
 ## Built with
 
