@@ -132,13 +132,16 @@
         .footer-right{display:flex;align-items:center;gap:8px}
         .res-label{font-size:9px;color:var(--text-muted)}
         .format-select{font-family:var(--font-mono);font-size:10px;padding:4px 6px;border:1px solid var(--border);border-radius:3px;background:var(--surface-2);color:var(--text);cursor:pointer;outline:none}
-        .menu-container{position:relative;display:flex;align-items:center;margin-left:4px}
+        .menu-container{position:relative;display:flex;align-items:center;margin-left:-4px}
         .menu-dropdown{position:absolute;top:100%;left:0;margin-top:8px;background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,0.4);padding:8px 0;min-width:180px;opacity:0;visibility:hidden;transform:translateY(-8px);transition:all .2s cubic-bezier(0.16,1,0.3,1);z-index:1000}
         .menu-dropdown.open{opacity:1;visibility:visible;transform:translateY(0)}
         .menu-link{display:block;padding:10px 16px;color:var(--text-muted);text-decoration:none;font-family:var(--font-display);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;transition:all .2s}
         .menu-link:hover{color:var(--accent);background:rgba(232,160,32,.08)}
         .menu-link.active{color:var(--accent)}
         #clearAllBtn{transform:translateX(4px)!important}
+        .empty-preview{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;pointer-events:none}
+        .empty-preview .ep-icon{font-size:36px;opacity:.15}
+        .empty-preview .ep-text{font-size:11px;color:var(--text-dim);letter-spacing:.05em}
     </style>
     <link rel="icon" href="../../assets/logo/logo.svg">
     <meta property="og:title" content="RGBA Channel Packer v1.0">
@@ -161,7 +164,7 @@
             </div>
             <h1>RGBA <span class="hl">PACKER</span></h1>
             <span class="badge">VFX Texture Tool</span>
-            <span class="badge">v1.2</span>
+            <span class="badge">v1.0</span>
         </div>
         <div class="header-right">
             <button class="btn" id="splitBtn">Split RGBA</button>
@@ -183,6 +186,10 @@
         </div>
         <div class="preview-area" id="previewArea">
             <canvas id="output"></canvas>
+            <div class="empty-preview" id="emptyPreview">
+                <div class="ep-icon">&#x2B13;</div>
+                <div class="ep-text">Add images into the RGBA channels</div>
+            </div>
             <div class="pixel-info" id="pixelInfo" style="display:none">
                 <span class="pi-r">R:<span id="piR">0</span></span>
                 <span class="pi-g">G:<span id="piG">0</span></span>
@@ -542,6 +549,15 @@ function checkResMismatch(){
     el.classList.add('visible');
 }
 
+function updateEmptyState() {
+    const hasAny = CK.some(k => ch[k].img || ch[k].split);
+    document.getElementById('emptyPreview').style.display = hasAny ? 'none' : 'flex';
+    if (!hasAny) {
+        outX.fillStyle = 'rgba(240,64,64,0.06)';
+        outX.fillRect(0, 0, tW, tH);
+    }
+}
+
 // CHANNEL EVENT LISTENERS
 CK.forEach(k=>{
     const dr=document.getElementById(k+'D'),inp=document.getElementById(k+'F'),md=document.getElementById(k+'M'),iv=document.getElementById(k+'V');
@@ -759,7 +775,7 @@ function repCh(k){procG(k);updP(k);schC();}
 function repAll(){CK.forEach(procG);CK.forEach(updP);composite();}
 let cR=0;function schC(){if(cR)cancelAnimationFrame(cR);cR=requestAnimationFrame(()=>{composite();cR=0;});}
 function bComp(){const l=tW*tH,o=new Uint8ClampedArray(l*4),rd=ch.r.raw,gd=ch.g.raw,bd=ch.b.raw,ad=ch.a.raw;for(let i=0;i<l;i++){const j=i*4;o[j]=rd?rd[i]:ch.r.fill;o[j+1]=gd?gd[i]:ch.g.fill;o[j+2]=bd?bd[i]:ch.b.fill;o[j+3]=ad?ad[i]:ch.a.fill;}return o;}
-function composite(){compRaw=bComp();const id=new ImageData(new Uint8ClampedArray(compRaw),tW,tH);cc.width=tW;cc.height=tH;cx.putImageData(id,0,0);apV();updEst();}
+function composite(){compRaw=bComp();const id=new ImageData(new Uint8ClampedArray(compRaw),tW,tH);cc.width=tW;cc.height=tH;cx.putImageData(id,0,0);apV();updEst();updateEmptyState();}
 function apV(){
     outC.width=tW;outC.height=tH;
     if(vmSet.has('rgba')){outX.drawImage(cc,0,0);return;}
