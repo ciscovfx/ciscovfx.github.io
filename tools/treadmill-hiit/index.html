@@ -252,12 +252,12 @@ body::before{content:'';position:fixed;inset:0;
       <div class="sg-name" id="sgName">WARMUP</div>
       <div class="sg-stats">
         <div class="stat-block">
-          <div class="stat-value" id="sgSpd">4.0</div>
-          <div class="stat-unit">KM/H</div>
-        </div>
-        <div class="stat-block">
           <div class="stat-value" id="sgInc">1</div>
           <div class="stat-unit">INCLINE %</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-value" id="sgSpd">3.5</div>
+          <div class="stat-unit">KM/H</div>
         </div>
       </div>
       <div class="sg-timer" id="sgTimer">05:00</div>
@@ -284,7 +284,7 @@ body::before{content:'';position:fixed;inset:0;
 
 <script>
 const S=[
-  {name:"WARMUP",type:"warmup",dur:300,spd:"4.0",inc:"1"},
+  {name:"WARMUP",type:"warmup",dur:300,spd:"3.5",inc:"1"},
   {name:"WORK 1",type:"work",dur:180,spd:"4.5",inc:"5"},
   {name:"REST 1",type:"rest",dur:120,spd:"3.5",inc:"1"},
   {name:"WORK 2",type:"work",dur:240,spd:"5.0",inc:"8"},
@@ -292,7 +292,7 @@ const S=[
   {name:"WORK 3",type:"work",dur:180,spd:"5.0",inc:"10"},
   {name:"REST 3",type:"rest",dur:120,spd:"3.0",inc:"0"},
   {name:"PEAK",type:"peak",dur:180,spd:"5.5",inc:"12"},
-  {name:"REST 4",type:"rest",dur:120,spd:"3.0",inc:"0"},
+  {name:"REST 4",type:"rest",dur:120,spd:"3.5",inc:"0"},
   {name:"COOL DOWN",type:"cooldown",dur:240,spd:"3.0",inc:"0"}
 ];
 const TOTAL=1800;
@@ -315,7 +315,7 @@ class Sound{
 
 /* ═══ TIMER ═══ */
 const T={
-  state:'idle',el:0,si:0,w6:false,w3:false,iv:null,au:new Sound(),
+  state:'idle',el:0,si:0,w6:false,w3:false,iv:null,cdIv:null,au:new Sound(),
   $(i){return document.getElementById(i)},
 
   go(){
@@ -324,11 +324,12 @@ const T={
     const f=S[0];
     this.$('cdPvName').textContent=f.name;
     this.$('cdPvName').style.color=COL[f.type];
-    this.$('cdPvStats').innerHTML=`<span class="val">${f.spd} KM/H</span><span> · </span><span class="val">${f.inc}% INCLINE</span>`;
+    this.$('cdPvStats').innerHTML=`<span class="val">${f.inc}% INCLINE</span><span> · </span><span class="val">${f.spd} KM/H</span>`;
     let n=10;this.cdShow(n);this.au.cd(n);
-    const iv=setInterval(()=>{
+    this.cdIv=setInterval(()=>{
       n--;this.cdShow(n);this.au.cd(n);
-      if(n<=0){clearInterval(iv);setTimeout(()=>{
+      if(n<=0){clearInterval(this.cdIv);this.cdIv=null;setTimeout(()=>{
+        if(this.state!=='cd')return;
         this.show('app');this.state='running';
         this.renderBarSegs();this.renderCard();this.renderUp();
         this.iv=setInterval(()=>this.tick(),1000);
@@ -426,7 +427,7 @@ const T={
     document.documentElement.style.setProperty('--glow',hr(col,.1));
     this.$('ambient').style.background=`radial-gradient(ellipse,${hr(col,.07)} 0%,transparent 65%)`;
     this.$('sgName').textContent=s.name;this.$('sgName').style.color=col;
-    this.$('sgSpd').textContent=s.spd;this.$('sgInc').textContent=s.inc;
+    this.$('sgInc').textContent=s.inc;this.$('sgSpd').textContent=s.spd;
     this.$('sgBar').style.background=col;this.$('barO').style.background='#c9b98a';
     this.$('card').dataset.type=s.type;
     this.$('bNum').textContent=`BLOCK ${this.si+1} / ${S.length}`;
@@ -466,7 +467,7 @@ const T={
     d.innerHTML=`<div class="up-dot" style="background:${c}"></div>
       <div class="up-name" style="color:${c}">${s.name}</div>
       <div class="up-stats-line" style="color:${c}">
-        <span>${s.spd} km/h</span><span>${s.inc}%</span>
+        <span>${s.inc}%</span><span>${s.spd} km/h</span>
       </div>
       <div class="up-dur" style="color:${c}">${fmt(s.dur)}</div>`;
     return d;
@@ -485,7 +486,7 @@ const T={
   },
 
   finish(){clearInterval(this.iv);this.state='done';this.au.done();this.$('dTime').textContent=fmt(TOTAL);this.show('doneScreen')},
-  reset(){clearInterval(this.iv);this.state='idle';this.el=0;this.si=0;this.w6=false;this.w3=false;
+  reset(){clearInterval(this.iv);clearInterval(this.cdIv);this.cdIv=null;this.state='idle';this.el=0;this.si=0;this.w6=false;this.w3=false;
     this.$('icPause').textContent='⏸';this.$('pauseOv').classList.remove('show');
     this.$('btnPause').setAttribute('data-tip','Pause · SPACE');this.show('startScreen')},
   show(id){['startScreen','cdScreen','app','doneScreen'].forEach(s=>{const el=this.$(s);
