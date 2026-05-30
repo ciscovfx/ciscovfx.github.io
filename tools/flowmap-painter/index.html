@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flowmap Painter v1.0</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="icon" href="../../assets/logo/logo.svg">
+    <meta name="description" content="Paint flow maps and export flow textures for VFX using Flowmap Painter.">
+    <meta property="og:title" content="Flowmap Painter v1.0">
+    <meta property="og:description" content="Paint flow maps and export flow textures for VFX.">
+    <meta property="og:image" content="https://ciscovfx.github.io/assets/logo/logo.svg">
+    <style>
+        :root{--bg:#1a1a1a;--surface:#242424;--surface-2:#2d2d2d;--border:#3a3a3a;--text:#e8e8e8;--text-muted:#a0a0a0;--text-dim:#686868;--r:#f04040;--g:#4ec94e;--b:#4d9ef5;--a:#c0c0c0;--accent:#e8a020;--font-display:'Syne',sans-serif;--font-mono:'DM Mono',monospace}
+        *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:var(--font-mono);background:var(--bg);color:var(--text);height:100vh;overflow:hidden;font-size:13px}
+        .app{display:grid;grid-template-columns:300px 1fr;grid-template-rows:48px 1fr 42px;height:100vh}
+        .header{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding:0 18px;border-bottom:1px solid var(--border);background:var(--surface)}
+        .header-left{display:flex;align-items:center;gap:12px}
+        .header h1{font-family:var(--font-display);font-size:15px;font-weight:800;letter-spacing:.06em}
+        .header h1 .hl{color:var(--accent)}
+        .badge{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);padding:2px 8px;border:1px solid rgba(232,160,32,.35);border-radius:3px;background:rgba(232,160,32,.08)}
+        .header-right{display:flex;align-items:center;gap:6px}
+        .menu-container{position:relative;display:flex;align-items:center;margin-left:-4px}
+        .menu-dropdown{position:absolute;top:100%;left:0;margin-top:8px;background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,.4);padding:8px 0;min-width:180px;opacity:0;visibility:hidden;transform:translateY(-8px);transition:all .2s cubic-bezier(.16,1,.3,1);z-index:1000}
+        .menu-dropdown.open{opacity:1;visibility:visible;transform:translateY(0)}
+        .menu-link{display:block;padding:10px 16px;color:var(--text-muted);text-decoration:none;font-family:var(--font-display);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;transition:all .2s}
+        .menu-link:hover{color:var(--accent);background:rgba(232,160,32,.08)}
+        .menu-link.active{color:var(--accent)}
+        .btn{font-family:var(--font-mono);font-size:10px;letter-spacing:.04em;padding:5px 11px;border:1px solid var(--border);border-radius:3px;background:var(--surface-2);color:var(--text-muted);cursor:pointer;transition:all .2s;white-space:nowrap;display:inline-flex;align-items:center;gap:4px}
+        .btn:hover{border-color:var(--accent);color:var(--accent)}
+        .btn:disabled{opacity:.4;cursor:default;pointer-events:none}
+        .btn-primary{background:var(--accent);color:#1a1a1a;border-color:var(--accent);font-weight:500}
+        .btn-primary:hover{background:#f5b840;border-color:#f5b840;color:#1a1a1a}
+        .btn-sm{padding:3px 7px;font-size:9px}
+        .btn-icon{width:26px;height:26px;padding:0;justify-content:center;font-size:13px}
+        .btn-danger{border-color:rgba(240,64,64,.4);color:var(--r)}
+        .btn-danger:hover{background:rgba(240,64,64,.12);border-color:var(--r);color:var(--r)}
+        #clearAllBtn{transform:translateX(4px)!important}
+        #resetSettingsBtn{border:1.5px solid var(--accent);color:var(--accent);background:rgba(232,160,32,.08);font-weight:500;font-size:10px;padding:5px 14px;letter-spacing:.05em}
+        #resetSettingsBtn:hover{background:var(--accent);color:var(--bg)}
+        .left-panel{grid-column:1;grid-row:2;border-right:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden}
+        .left-panel::-webkit-scrollbar{width:4px}
+        .left-panel::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+        .panel-section{padding:12px 14px;border-bottom:1px solid var(--border);flex-shrink:0}
+        .section-title{font-family:var(--font-display);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px}
+        .tool-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+        .tool-btn{font-family:var(--font-mono);font-size:9px;padding:6px 4px;border:1px solid var(--border);border-radius:4px;background:var(--surface-2);color:var(--text-muted);cursor:pointer;transition:all .15s;text-align:center;display:flex;flex-direction:column;align-items:center;gap:3px}
+        .tool-btn .tool-icon{font-size:15px;line-height:1;display:flex;align-items:center;justify-content:center;min-height:16px}
+        .tool-btn .tool-icon svg{width:16px;height:16px;display:block}
+        .tool-btn:hover{border-color:var(--accent);color:var(--text)}
+        .tool-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(232,160,32,.1)}
+        .tool-btn.unimplemented{opacity:.45;cursor:default}
+        .tool-btn.unimplemented:hover{border-color:var(--border);color:var(--text-muted);background:var(--surface-2)}
+        .tool-btn.unimplemented.active{opacity:.7;border-color:var(--accent);color:var(--accent);background:rgba(232,160,32,.06)}
+        .pg{margin-bottom:10px}.pg:last-child{margin-bottom:0}
+        .pg-head{display:flex;align-items:baseline;margin-bottom:3px}
+        .pg-label{font-size:9px;color:var(--text-muted);letter-spacing:.05em;flex:1}
+        .pg-val{font-family:var(--font-mono);font-size:11px;color:var(--accent);font-weight:500;padding:1px 4px;border:1px solid transparent;border-radius:3px;min-width:32px;text-align:right;outline:none;cursor:text;display:inline-block;line-height:1.3}
+        .pg-val:focus{border-color:var(--accent);background:var(--surface-2)}
+        .pg-unit{font-size:9px;color:var(--text-dim);margin-left:2px}
+        .pg-ctrl{display:flex;align-items:center;gap:3px}
+        .pg-btn{width:24px;height:22px;border:1px solid var(--border);border-radius:3px;background:var(--surface-2);color:var(--text-muted);cursor:pointer;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;line-height:1;user-select:none;transition:border-color .15s,color .15s}
+        .pg-btn:hover{border-color:var(--accent);color:var(--accent)}
+        .pg-btn.rst{font-size:14px;font-weight:500}
+        .pg-btn.rst:hover{color:var(--accent)}
+        .pg-ctrl input[type="range"]{flex:1;height:14px;accent-color:var(--accent);cursor:pointer;-webkit-appearance:none;background:transparent}
+        .pg-ctrl input[type="range"]::-webkit-slider-runnable-track{height:3px;background:var(--border);border-radius:2px}
+        .pg-ctrl input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--accent);margin-top:-4.5px;cursor:pointer}
+        .dir-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+        .dir-wheel-wrap{position:relative;flex-shrink:0}
+        #dirWheel{cursor:crosshair;border-radius:50%;border:1px solid var(--border);display:block}
+        .dir-arrow{position:absolute;top:50%;left:50%;width:2px;height:28px;background:var(--accent);transform-origin:bottom center;transform:translateX(-50%) translateY(-100%) rotate(0deg);pointer-events:none;border-radius:1px}
+        .dir-info{flex:1;display:flex;flex-direction:column;gap:3px}
+        .dir-angle-display{font-family:var(--font-display);font-size:20px;font-weight:700;color:var(--accent);letter-spacing:-.02em;line-height:1}
+        .dir-angle-sub{font-size:9px;color:var(--text-dim)}
+        .dir-uv{font-size:9px;color:var(--text-muted)}
+        .size-row{display:flex;align-items:center;gap:5px}
+        .size-input{font-family:var(--font-mono);font-size:10px;width:46px;padding:3px 5px;text-align:center;border:1px solid var(--border);border-radius:3px;background:var(--surface-2);color:var(--text);outline:none;-moz-appearance:textfield}
+        .size-input::-webkit-inner-spin-button,.size-input::-webkit-outer-spin-button{-webkit-appearance:none}
+        .size-input:focus{border-color:var(--accent)}
+        .size-x{color:var(--accent);font-size:11px}
+        .unit-label{font-size:9px;color:var(--text-dim);flex-shrink:0}
+        .lock-btn{width:22px;height:22px;border:1px solid var(--border);border-radius:3px;background:var(--surface-2);color:var(--text-dim);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:border-color .35s ease-out,color .35s ease-out;line-height:1}
+        .lock-btn.locked{border-color:var(--accent);color:var(--accent);transition:none}
+        .lock-btn:not(.locked):hover{border-color:var(--text-dim);color:var(--text-muted)}
+        .toggle-row{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--text-muted);cursor:pointer;user-select:none}
+        .toggle-row input[type=checkbox]{accent-color:var(--accent);cursor:pointer;width:13px;height:13px}
+        .ref-drop{border:1px dashed var(--border);border-radius:4px;height:52px;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text-muted);cursor:pointer;transition:border-color .2s;position:relative;overflow:hidden}
+        .ref-drop:hover,.ref-drop.dragover{border-color:var(--accent);border-style:solid}
+        .ref-drop img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none}
+        .ref-drop .ref-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:6px;pointer-events:none;background:rgba(26,26,26,.3)}
+        .ref-drop.has-image .ref-label{opacity:0}
+        .ref-clear{position:absolute;top:4px;right:4px;z-index:2;font-size:11px;color:var(--text-dim);cursor:pointer;background:none;border:none;padding:2px 4px;border-radius:3px;line-height:1;display:none}
+        .ref-drop.has-image .ref-clear{display:flex}
+        .ref-clear:hover{color:var(--r);background:rgba(255,64,64,.1)}
+        .presets-row{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:7px}
+        .presets-row>.btn{width:100%;justify-content:center}
+        .canvas-panel{grid-column:2;grid-row:2;display:flex;flex-direction:column;background:var(--bg);overflow:hidden;position:relative}
+        .canvas-toolbar{display:flex;align-items:center;justify-content:space-between;padding:6px 14px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;gap:10px}
+        .toolbar-label{font-family:var(--font-display);font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted)}
+        .toolbar-center{display:flex;align-items:center;gap:8px}
+        .view-modes{display:flex;gap:1px}
+        .vm-btn{font-family:var(--font-mono);font-size:9px;font-weight:500;padding:3px 8px;border:1px solid var(--border);background:var(--surface-2);color:var(--text-muted);cursor:pointer;transition:all .15s}
+        .vm-btn:first-child{border-radius:3px 0 0 3px}
+        .vm-btn:last-child{border-radius:0 3px 3px 0}
+        .vm-btn.active{background:var(--accent);color:#1a1a1a;border-color:var(--accent)}
+        .vm-btn:hover:not(.active){color:var(--text)}
+        .zoom-group{display:flex;align-items:center;gap:4px}
+        .zoom-pct{font-size:10px;color:var(--text);min-width:36px;text-align:center;cursor:pointer;padding:2px 4px;border:1px solid transparent;border-radius:3px;user-select:none}
+        .zoom-pct:hover{border-color:var(--border)}
+        .canvas-area{flex:1;position:relative;overflow:hidden;cursor:crosshair;background-color:#1e1e1e;background-image:linear-gradient(45deg,#252525 25%,transparent 25%,transparent 75%,#252525 75%),linear-gradient(45deg,#252525 25%,transparent 25%,transparent 75%,#252525 75%);background-size:14px 14px;background-position:0 0,7px 7px}
+        .canvas-area canvas{position:absolute;transform-origin:0 0}
+        #glCanvas{z-index:1;image-rendering:auto;border:1px solid var(--border);left:0;top:0;pointer-events:none}
+        #mainCanvas{z-index:2;image-rendering:pixelated;border:1px solid var(--border)}
+        #cursorCanvas{z-index:3;pointer-events:none;left:0;top:0;border:none!important;background:transparent}
+        .pixel-info{position:absolute;bottom:8px;left:8px;font-size:10px;color:var(--text-muted);background:rgba(26,26,26,.92);padding:4px 10px;border-radius:3px;border:1px solid var(--border);pointer-events:none;display:flex;gap:10px;z-index:10}
+        .pi-r{color:var(--r)}.pi-g{color:var(--g)}.pi-pos{color:var(--text-dim)}
+        .brush-hint{position:absolute;top:8px;right:8px;font-size:10px;font-weight:500;color:var(--text-dim);pointer-events:none;background:rgba(26,26,26,.7);padding:3px 8px;border-radius:3px;border:1px solid var(--border);z-index:10;transition:color .2s}
+        .brush-hint.phase2{color:var(--accent);border-color:rgba(232,160,32,.4);background:rgba(232,160,32,.08)}
+        .swirl-ring{position:absolute;border:2px solid var(--accent);border-radius:50%;pointer-events:none;z-index:10;display:none;box-shadow:0 0 8px rgba(232,160,32,.3)}
+        .footer{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding:0 14px;border-top:1px solid var(--border);background:var(--surface)}
+        .footer-left{display:flex;align-items:center;gap:10px}
+        .footer-right{display:flex;align-items:center;gap:8px}
+        .res-label{font-size:9px;color:var(--text-muted);letter-spacing:.05em}
+        .format-label{font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em}
+        .res-badge{font-size:10px;color:var(--accent);font-weight:500;min-width:100px}
+        .res-val{color:var(--text)}.res-x{color:var(--accent)}.res-unit{color:var(--text-dim)}
+        .format-select{font-family:var(--font-mono);font-size:10px;padding:4px 6px;border:1px solid var(--border);border-radius:3px;background:var(--surface-2);color:var(--text);cursor:pointer;outline:none}
+        .sg-input{font-family:var(--font-mono);font-size:10px;padding:2px 4px;text-align:center;border:1px solid var(--border);border-radius:3px;background:var(--surface-2);color:var(--text);outline:none}
+        .sg-input:focus{border-color:var(--accent)}
+        .size-toggle{display:flex;align-items:center;gap:3px;font-size:9px;color:var(--accent);cursor:pointer;user-select:none}
+        .size-toggle input{accent-color:var(--accent);cursor:pointer;width:11px;height:11px}
+        .nmode-row{display:flex;gap:4px;margin-bottom:10px}
+        .nmode-btn{flex:1;font-family:var(--font-mono);font-size:9px;font-weight:500;padding:4px 0;border:1px solid var(--border);border-radius:3px;background:var(--surface-2);color:var(--text-muted);cursor:pointer;transition:all .15s;text-align:center;letter-spacing:.04em}
+        .nmode-btn:hover{border-color:var(--accent);color:var(--text)}
+        .nmode-btn.active{background:var(--accent);color:#1a1a1a;border-color:var(--accent)}
+    </style>
+</head>
+<body>
+<div class="app">
+<header class="header">
+    <div class="header-left">
+        <div class="menu-container">
+            <button class="btn btn-icon" id="menuBtn" aria-label="Menu">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            </button>
+            <div class="menu-dropdown" id="menuDropdown">
+                <a href="../../index.html" class="menu-link">Home</a>
+                <a href="../flipbook-packer/index.html" class="menu-link">Flipbook Packer</a>
+                <a href="../flowmap-painter/index.html" class="menu-link active">Flowmap Painter</a>
+                <a href="../rgba-packer/index.html" class="menu-link">RGBA Packer</a>
+            </div>
+        </div>
+        <h1>Flowmap <span class="hl">PAINTER</span></h1>
+        <span class="badge">VFX Texture Tool</span>
+        <span class="badge">v1.0</span>
+    </div>
+    <div class="header-right">
+        <button class="btn" id="undoBtn" disabled title="Undo (Ctrl+Z)">Undo</button>
+        <button class="btn" id="redoBtn" disabled title="Redo (Ctrl+Y)">Redo</button>
+        <button class="btn btn-danger" id="clearAllBtn">Clear All</button>
+    </div>
+</header>
+<div class="left-panel" id="leftPanel">
+    <div class="panel-section">
+        <div class="section-title">Tools</div>
+        <div class="tool-grid">
+            <button class="tool-btn active" data-tool="brush" title="Brush (Q)"><span class="tool-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M2 12 C3 9 5 7 7 9 C9 11 10 5 14 3"/></svg></span><span>Brush</span></button>
+            <button class="tool-btn" data-tool="erase" title="Erase (W)"><span class="tool-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><defs><clipPath id="ec"><polygon points="0,0 8,0 1,16 0,16"/><polygon points="13,0 16,0 16,16 6,16"/></clipPath></defs><path d="M2 12 C3 9 5 7 7 9 C9 11 10 5 14 3" clip-path="url(#ec)"/></svg></span><span>Erase</span></button>
+            <button class="tool-btn" data-tool="smooth" title="Smooth (E)"><span class="tool-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1 8c1.3-3 2.7-3 4 0s2.7 3 4 0 2.7-3 4 0"/></svg></span><span>Smooth</span></button>
+            <button class="tool-btn" data-tool="smudge" title="Smudge (A)"><span class="tool-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1 8 Q8 0.5 15 8"/><path d="M3 11 Q8 6 13 11"/><path d="M5.5 14 Q8 11.5 10.5 14"/></svg></span><span>Smudge</span></button>
+            <button class="tool-btn" data-tool="noise" title="Noise (S)"><span class="tool-icon"><svg viewBox="0 0 16 16" fill="currentColor" stroke="none"><circle cx="3" cy="3" r="1.2"/><circle cx="8" cy="2" r="1.2"/><circle cx="13" cy="5" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="2" cy="13" r="1.2"/><circle cx="8" cy="12" r="1.2"/><circle cx="13" cy="12" r="1.2"/></svg></span><span>Noise</span></button>
+            <button class="tool-btn" data-tool="pinch" title="Pinch (D)"><span class="tool-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8h4M11 8h4"/><path d="M5 5l2 3-2 3"/><path d="M11 5l-2 3 2 3"/></svg></span><span>Pinch</span></button>
+            <button class="tool-btn" data-tool="swirl" title="Swirl (Z)"><span class="tool-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 6 C2 2 14 2 14 8 C14 12.5 9 14.5 6 12.5 C3.5 11 4 7.5 7 7 C9 6.5 10.5 8 9.5 9.5"/></svg></span><span>Swirl</span></button>
+            <button class="tool-btn" data-tool="ripples" title="Ripples (X)"><span class="tool-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2"/><circle cx="8" cy="8" r="4.5"/><circle cx="8" cy="8" r="7"/></svg></span><span>Ripples</span></button>
+            <button class="tool-btn" data-tool="sphere" title="Sphere (C)"><span class="tool-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M4 4.5C5 6 6.5 7 8 7s3-1 4-2.5" stroke-linecap="round"/></svg></span><span>Sphere</span></button>
+        </div>
+    </div>
+    <div class="panel-section" id="subModeSection" style="display:none;padding:8px 14px">
+        <div class="nmode-row">
+            <button class="nmode-btn active" id="subModePaint" title="Switch Mode (M)">Paint</button>
+            <button class="nmode-btn" id="subModeDistort" title="Switch Mode (M)">Distort</button>
+        </div>
+    </div>
+    <div class="panel-section" id="brushSection">
+        <div class="section-title" id="brushSectionTitle">Brush</div>
+        <div class="dir-row" id="dirRow">
+            <div class="dir-wheel-wrap"><canvas id="dirWheel" width="68" height="68"></canvas><div class="dir-arrow" id="dirArrow"></div></div>
+            <div class="dir-info">
+                <div class="dir-angle-display" id="dirAngleDisplay">0</div>
+                <div class="dir-angle-sub">Flow direction</div>
+                <div class="dir-uv" id="dirUV">UV (0.500, 0.500)</div>
+            </div>
+        </div>
+        <div style="margin-bottom:12px" id="dirStrokeRow"><label class="toggle-row"><input type="checkbox" id="dirFromStrokeCheck" checked> Direction from stroke</label></div>
+        <div class="pg"><div class="pg-head"><span class="pg-label">Size</span><span class="pg-val" id="brushSizeV" contenteditable="true" spellcheck="false">64</span><span class="pg-unit">px</span></div><div class="pg-ctrl"><button class="pg-btn" data-dec="brushSize">-</button><input type="range" id="brushSize" min="1" max="1024" value="64"><button class="pg-btn" data-inc="brushSize">+</button><button class="pg-btn rst" data-rst="brushSize">&#8634;</button></div></div>
+        <div class="pg" id="brushIntensityPg"><div class="pg-head"><span class="pg-label">Intensity</span><span class="pg-val" id="brushIntensityV" contenteditable="true" spellcheck="false">0.10</span></div><div class="pg-ctrl"><button class="pg-btn" data-dec="brushIntensity">-</button><input type="range" id="brushIntensity" min="1" max="100" value="10"><button class="pg-btn" data-inc="brushIntensity">+</button><button class="pg-btn rst" data-rst="brushIntensity">&#8634;</button></div></div>
+        <div class="pg"><div class="pg-head"><span class="pg-label">Hardness</span><span class="pg-val" id="brushHardnessV" contenteditable="true" spellcheck="false">50</span><span class="pg-unit">%</span></div><div class="pg-ctrl"><button class="pg-btn" data-dec="brushHardness">-</button><input type="range" id="brushHardness" min="0" max="100" value="50"><button class="pg-btn" data-inc="brushHardness">+</button><button class="pg-btn rst" data-rst="brushHardness">&#8634;</button></div></div>
+        <div id="noiseExtra" style="display:none">
+            <div class="pg"><div class="pg-head"><span class="pg-label">Intensity</span><span class="pg-val" id="noiseIntensityV" contenteditable="true" spellcheck="false">30</span><span class="pg-unit">%</span></div><div class="pg-ctrl"><button class="pg-btn" data-dec="noiseIntensity">-</button><input type="range" id="noiseIntensity" min="1" max="100" value="30"><button class="pg-btn" data-inc="noiseIntensity">+</button><button class="pg-btn rst" data-rst="noiseIntensity">&#8634;</button></div></div>
+            <div class="pg"><div class="pg-head"><span class="pg-label">Noise Scale</span><span class="pg-val" id="noiseScaleV" contenteditable="true" spellcheck="false">25</span></div><div class="pg-ctrl"><button class="pg-btn" data-dec="noiseScale">-</button><input type="range" id="noiseScale" min="1" max="200" value="25"><button class="pg-btn" data-inc="noiseScale">+</button><button class="pg-btn rst" data-rst="noiseScale">&#8634;</button></div></div>
+            <div class="pg"><div class="pg-head"><span class="pg-label">Turbulence</span><span class="pg-val" id="noiseTurbulenceV" contenteditable="true" spellcheck="false">50</span><span class="pg-unit">%</span></div><div class="pg-ctrl"><button class="pg-btn" data-dec="noiseTurbulence">-</button><input type="range" id="noiseTurbulence" min="0" max="100" value="50"><button class="pg-btn" data-inc="noiseTurbulence">+</button><button class="pg-btn rst" data-rst="noiseTurbulence">&#8634;</button></div></div>
+        </div>
+        <div id="smudgeExtra" style="display:none">
+            <div class="pg"><div class="pg-head"><span class="pg-label">Intensity</span><span class="pg-val" id="smudgeIntensityV" contenteditable="true" spellcheck="false">40</span><span class="pg-unit">%</span></div><div class="pg-ctrl"><button class="pg-btn" data-dec="smudgeIntensity">-</button><input type="range" id="smudgeIntensity" min="1" max="100" value="50"><button class="pg-btn" data-inc="smudgeIntensity">+</button><button class="pg-btn rst" data-rst="smudgeIntensity">&#8634;</button></div></div>
+            <div class="pg"><div class="pg-head"><span class="pg-label">Smear Length</span><span class="pg-val" id="smudgeLengthV" contenteditable="true" spellcheck="false">32</span><span class="pg-unit">%</span></div><div class="pg-ctrl"><button class="pg-btn" data-dec="smudgeLength">-</button><input type="range" id="smudgeLength" min="1" max="100" value="50"><button class="pg-btn" data-inc="smudgeLength">+</button><button class="pg-btn rst" data-rst="smudgeLength">&#8634;</button></div></div>
+            <div class="pg"><div class="pg-head"><span class="pg-label">Falloff</span><span class="pg-val" id="smudgeFalloffV" contenteditable="true" spellcheck="false">60</span><span class="pg-unit">%</span></div><div class="pg-ctrl"><button class="pg-btn" data-dec="smudgeFalloff">-</button><input type="range" id="smudgeFalloff" min="1" max="100" value="60"><button class="pg-btn" data-inc="smudgeFalloff">+</button><button class="pg-btn rst" data-rst="smudgeFalloff">&#8634;</button></div></div>
+        </div>
+    </div>
+    <div class="panel-section" id="swirlSection" style="display:none">
+        <div class="section-title">Swirl &mdash; drag <span style="color:var(--accent)">left</span>=CCW, <span style="color:var(--accent)">right</span>=CW</div>
+        <div class="pg"><div class="pg-head"><span class="pg-label">Turns</span><span class="pg-val" id="swirlTurnsV" contenteditable="true" spellcheck="false">2.0</span></div><div class="pg-ctrl"><button class="pg-btn" data-dec="swirlTurns">-</button><input type="range" id="swirlTurns" min="5" max="100" value="20"><button class="pg-btn" data-inc="swirlTurns">+</button><button class="pg-btn rst" data-rst="swirlTurns">&#8634;</button></div></div>
+        <div class="pg"><div class="pg-head"><span class="pg-label">Intensity</span><span class="pg-val" id="swirlIntensityV" contenteditable="true" spellcheck="false">50</span><span class="pg-unit">%</span></div><div class="pg-ctrl"><button class="pg-btn" data-dec="swirlIntensity">-</button><input type="range" id="swirlIntensity" min="1" max="100" value="50"><button class="pg-btn" data-inc="swirlIntensity">+</button><button class="pg-btn rst" data-rst="swirlIntensity">&#8634;</button></div></div>
+        <div class="pg"><div class="pg-head"><span class="pg-label">Falloff</span><span class="pg-val" id="swirlFalloffV" contenteditable="true" spellcheck="false">32</span><span class="pg-unit">%</span></div><div class="pg-ctrl"><button class="pg-btn" data-dec="swirlFalloff">-</button><input type="range" id="swirlFalloff" min="1" max="100" value="32"><button class="pg-btn" data-inc="swirlFalloff">+</button><button class="pg-btn rst" data-rst="swirlFalloff">&#8634;</button></div></div>
+        <div class="pg"><div class="pg-head"><span class="pg-label">Feather</span><span class="pg-val" id="swirlFeatherV" contenteditable="true" spellcheck="false">80</span><span class="pg-unit">%</span></div><div class="pg-ctrl"><button class="pg-btn" data-dec="swirlFeather">-</button><input type="range" id="swirlFeather" min="0" max="100" value="80"><button class="pg-btn" data-inc="swirlFeather">+</button><button class="pg-btn rst" data-rst="swirlFeather">&#8634;</button></div></div>
+    </div>
+    <div class="panel-section" id="sphereSection" style="display:none">
+        <div class="section-title">Sphere &mdash; drag</div>
+        <div class="pg"><div class="pg-head"><span class="pg-label">Intensity</span><span class="pg-val" id="sphereIntensityV" contenteditable="true" spellcheck="false">50</span><span class="pg-unit">%</span></div><div class="pg-ctrl"><button class="pg-btn" data-dec="sphereIntensity">-</button><input type="range" id="sphereIntensity" min="1" max="100" value="50"><button class="pg-btn" data-inc="sphereIntensity">+</button><button class="pg-btn rst" data-rst="sphereIntensity">&#8634;</button></div></div>
+        <div class="pg"><div class="pg-head"><span class="pg-label">Falloff</span><span class="pg-val" id="sphereFalloffV" contenteditable="true" spellcheck="false">70</span><span class="pg-unit">%</span></div><div class="pg-ctrl"><button class="pg-btn" data-dec="sphereFalloff">-</button><input type="range" id="sphereFalloff" min="1" max="100" value="70"><button class="pg-btn" data-inc="sphereFalloff">+</button><button class="pg-btn rst" data-rst="sphereFalloff">&#8634;</button></div></div>
+        <div class="pg"><div class="pg-head"><span class="pg-label">Feather</span><span class="pg-val" id="sphereFeatherV" contenteditable="true" spellcheck="false">80</span><span class="pg-unit">%</span></div><div class="pg-ctrl"><button class="pg-btn" data-dec="sphereFeather">-</button><input type="range" id="sphereFeather" min="0" max="100" value="80"><button class="pg-btn" data-inc="sphereFeather">+</button><button class="pg-btn rst" data-rst="sphereFeather">&#8634;</button></div></div>
+    </div>
+    <div class="panel-section" id="pinchSection" style="display:none">
+        <div class="section-title">Pinch &mdash; drag <span style="color:var(--accent)">left</span>=in, <span style="color:var(--accent)">right</span>=out</div>
+        <div class="pg"><div class="pg-head"><span class="pg-label">Turns</span><span class="pg-val" id="pinchRotationV" contenteditable="true" spellcheck="false">0</span></div><div class="pg-ctrl"><button class="pg-btn" data-dec="pinchRotation">-</button><input type="range" id="pinchRotation" min="-100" max="100" value="0"><button class="pg-btn" data-inc="pinchRotation">+</button><button class="pg-btn rst" data-rst="pinchRotation">&#8634;</button></div></div>
+        <div class="pg"><div class="pg-head"><span class="pg-label">Intensity</span><span class="pg-val" id="pinchIntensityV" contenteditable="true" spellcheck="false">50</span><span class="pg-unit">%</span></div><div class="pg-ctrl"><button class="pg-btn" data-dec="pinchIntensity">-</button><input type="range" id="pinchIntensity" min="1" max="100" value="50"><button class="pg-btn" data-inc="pinchIntensity">+</button><button class="pg-btn rst" data-rst="pinchIntensity">&#8634;</button></div></div>
+        <div class="pg"><div class="pg-head"><span class="pg-label">Falloff</span><span class="pg-val" id="pinchFalloffV" contenteditable="true" spellcheck="false">40</span><span class="pg-unit">%</span></div><div class="pg-ctrl"><button class="pg-btn" data-dec="pinchFalloff">-</button><input type="range" id="pinchFalloff" min="1" max="100" value="40"><button class="pg-btn" data-inc="pinchFalloff">+</button><button class="pg-btn rst" data-rst="pinchFalloff">&#8634;</button></div></div>
+        <div class="pg"><div class="pg-head"><span class="pg-label">Feather</span><span class="pg-val" id="pinchFeatherV" contenteditable="true" spellcheck="false">80</span><span class="pg-unit">%</span></div><div class="pg-ctrl"><button class="pg-btn" data-dec="pinchFeather">-</button><input type="range" id="pinchFeather" min="0" max="100" value="80"><button class="pg-btn" data-inc="pinchFeather">+</button><button class="pg-btn rst" data-rst="pinchFeather">&#8634;</button></div></div>
+    </div>
+    <div class="panel-section" id="ripplesSection" style="display:none">
+        <div class="section-title">Ripples &mdash; drag</div>
+        <div class="pg"><div class="pg-head"><span class="pg-label">Count</span><span class="pg-val" id="ripplesCountV" contenteditable="true" spellcheck="false">3</span></div><div class="pg-ctrl"><button class="pg-btn" data-dec="ripplesCount">-</button><input type="range" id="ripplesCount" min="1" max="20" value="3"><button class="pg-btn" data-inc="ripplesCount">+</button><button class="pg-btn rst" data-rst="ripplesCount">&#8634;</button></div></div>
+        <div class="pg"><div class="pg-head"><span class="pg-label">Intensity</span><span class="pg-val" id="ripplesIntensityV" contenteditable="true" spellcheck="false">50</span><span class="pg-unit">%</span></div><div class="pg-ctrl"><button class="pg-btn" data-dec="ripplesIntensity">-</button><input type="range" id="ripplesIntensity" min="1" max="100" value="50"><button class="pg-btn" data-inc="ripplesIntensity">+</button><button class="pg-btn rst" data-rst="ripplesIntensity">&#8634;</button></div></div>
+        <div class="pg"><div class="pg-head"><span class="pg-label">Falloff</span><span class="pg-val" id="ripplesFalloffV" contenteditable="true" spellcheck="false">50</span><span class="pg-unit">%</span></div><div class="pg-ctrl"><button class="pg-btn" data-dec="ripplesFalloff">-</button><input type="range" id="ripplesFalloff" min="1" max="100" value="50"><button class="pg-btn" data-inc="ripplesFalloff">+</button><button class="pg-btn rst" data-rst="ripplesFalloff">&#8634;</button></div></div>
+        <div class="pg"><div class="pg-head"><span class="pg-label">Feather</span><span class="pg-val" id="ripplesFeatherV" contenteditable="true" spellcheck="false">80</span><span class="pg-unit">%</span></div><div class="pg-ctrl"><button class="pg-btn" data-dec="ripplesFeather">-</button><input type="range" id="ripplesFeather" min="0" max="100" value="80"><button class="pg-btn" data-inc="ripplesFeather">+</button><button class="pg-btn rst" data-rst="ripplesFeather">&#8634;</button></div></div>
+    </div>
+    <div class="panel-section">
+        <div class="section-title">Canvas Size</div>
+        <div class="size-row">
+            <span style="font-size:9px;color:var(--text-muted);min-width:34px">Width</span>
+            <input type="text" class="size-input" id="canvW" value="512">
+            <span class="unit-label">px</span>
+            <span class="size-x">&times;</span>
+            <span style="font-size:9px;color:var(--text-muted);min-width:34px">Height</span>
+            <input type="text" class="size-input" id="canvH" value="512">
+            <span class="unit-label">px</span>
+            <button class="lock-btn locked" id="lockCanvAR" title="Lock aspect ratio" style="margin-left:auto">&#x1F517;</button>
+        </div>
+        <div class="presets-row">
+            <button class="btn btn-sm" data-csize="256">256</button>
+            <button class="btn btn-sm" data-csize="512">512</button>
+            <button class="btn btn-sm" data-csize="1024">1024</button>
+            <button class="btn btn-sm" data-csize="2048">2048</button>
+        </div>
+    </div>
+    <div class="panel-section">
+        <div class="section-title">Preview Texture</div>
+        <div class="ref-drop" id="refDrop">
+            <img id="refThumbImg" style="display:none" alt="">
+            <span class="ref-label"><span style="color:var(--accent)">Drop</span> image or <span style="color:var(--accent)">click</span></span>
+            <button class="ref-clear" id="refClear" title="Remove">&#x2715;</button>
+        </div>
+        <input type="file" id="refInput" accept="image/*" style="display:none">
+        <div class="pg" style="margin-top:8px"><div class="pg-head"><span class="pg-label">Flow speed</span><span class="pg-val" id="previewSpeedV" contenteditable="true" spellcheck="false">0.30</span></div><div class="pg-ctrl"><button class="pg-btn" data-dec="previewSpeed">-</button><input type="range" id="previewSpeed" min="1" max="100" value="30"><button class="pg-btn" data-inc="previewSpeed">+</button><button class="pg-btn rst" data-rst="previewSpeed">&#8634;</button></div></div>
+    </div>
+    <div class="panel-section">
+        <div class="section-title">Options</div>
+        <div class="ctrl-row"><label class="toggle-row"><input type="checkbox" id="seamlessCheck" checked> Tileable (seamless)</label></div>
+        <div class="ctrl-row" style="margin-top:6px"><label class="toggle-row"><input type="checkbox" id="showArrows" checked> Flow arrows overlay</label></div>
+        <div class="ctrl-row" style="margin-top:6px"><label class="toggle-row"><input type="checkbox" id="blueChannelCheck"> Blue channel</label></div>
+        <div class="ctrl-row" style="margin-top:6px"><label class="toggle-row"><input type="checkbox" id="centerGridCheck"> Center grid</label></div>
+    </div>
+</div>
+<div class="canvas-panel">
+    <div class="canvas-toolbar">
+        <span class="toolbar-label">Canvas</span>
+        <div class="toolbar-center">
+            <div class="view-modes" id="viewModes">
+                <button class="vm-btn active" data-view="preview">Preview</button>
+                <button class="vm-btn" data-view="flowmap">Flowmap</button>
+                <button class="vm-btn" data-view="r">R</button>
+                <button class="vm-btn" data-view="g">G</button>
+            </div>
+            <button class="btn btn-sm" id="resetCanvasBtn" title="Reset painted flow to neutral (R)" style="margin-left:16px">Reset Canvas</button>
+        </div>
+        <div class="zoom-group">
+            <button class="btn btn-sm btn-icon" id="zoomOut">-</button>
+            <span class="zoom-pct" id="zoomPct">100%</span>
+            <button class="btn btn-sm btn-icon" id="zoomIn">+</button>
+            <button class="btn btn-sm btn-icon" id="zoomFit" title="Fit to view (F)" style="font-size:10px;letter-spacing:-.06em">[ ]</button>
+        </div>
+    </div>
+    <div class="canvas-area" id="canvasArea">
+        <canvas id="glCanvas"></canvas>
+        <canvas id="mainCanvas"></canvas>
+        <canvas id="cursorCanvas"></canvas>
+        <div class="swirl-ring" id="swirlRing"></div>
+        <div class="pixel-info" id="pixelInfo" style="display:none">
+            <span class="pi-r">R:<span id="piR">128</span></span>
+            <span class="pi-g">G:<span id="piG">128</span></span>
+            <span class="pi-pos" id="piPos"></span>
+        </div>
+        <div class="brush-hint" id="brushHint">Paint to define flow direction</div>
+    </div>
+</div>
+<div class="footer">
+    <div class="footer-left">
+        <button class="btn" id="resetSettingsBtn">Reset Settings</button>
+        <span class="res-label">Output</span>
+        <span class="res-badge" id="footerRes"><span class="res-val">512</span><span class="res-unit"> px</span> <span class="res-x">&times;</span> <span class="res-val">512</span><span class="res-unit"> px</span></span>
+    </div>
+    <div class="footer-right">
+        <span class="res-label" id="fileSizeEst"></span>
+        <span class="format-label" id="exportLabel">PNG</span>
+        <input type="text" id="outName" class="sg-input" style="width:140px;font-size:10px" placeholder="filename" value="T_Flowmap">
+        <label class="size-toggle" title="Append resolution to filename"><input type="checkbox" id="appendSize" checked> +size</label>
+        <select class="format-select" id="exportFormat">
+            <option value="png">PNG [Lossless]</option>
+            <option value="tga">TGA [RLE]</option>
+            <option value="exr">EXR [HALF ZIP]</option>
+        </select>
+        <button class="btn btn-primary" id="exportBtn" title="Export (Ctrl+Alt+Shift+E)">Export</button>
+    </div>
+</div>
+</div>
+<script>
+const DEF={brushSize:64,brushIntensity:10,brushHardness:50,swirlRadius:128,swirlTurns:2,swirlIntensity:50,swirlFalloff:32,swirlFeather:80,sphereIntensity:50,sphereFalloff:70,sphereFeather:80,previewSpeed:30,noiseIntensity:30,noiseScale:25,noiseTurbulence:50,smudgeIntensity:50,smudgeLength:50,smudgeFalloff:60,pinchRotation:0,pinchIntensity:50,pinchFalloff:40,pinchFeather:80,ripplesCount:3,ripplesIntensity:50,ripplesFalloff:50,ripplesFeather:80};
+let canvW=512,canvH=512,zoom=1,panX=0,panY=0,isPan=false,psx=0,psy=0,ppx=0,ppy=0;
+let currentTool='brush',viewMode='preview',dirAngle=0,dirFromStroke=true;
+let brushSize=DEF.brushSize,brushIntensity=DEF.brushIntensity/100,brushHardness=DEF.brushHardness/100;
+let swirlRadius=DEF.swirlRadius,swirlTurns=DEF.swirlTurns,swirlIntensity=DEF.swirlIntensity/100;
+let swirlFalloff=DEF.swirlFalloff/100,swirlFeather=DEF.swirlFeather/100;
+let sphereIntensity=DEF.sphereIntensity/100,sphereFalloff=DEF.sphereFalloff/100,sphereFeather=DEF.sphereFeather/100;
+let pinchIntensity=DEF.pinchIntensity/100,pinchFalloff=DEF.pinchFalloff/100,pinchFeather=DEF.pinchFeather/100,pinchRotation=DEF.pinchRotation;
+let ripplesCount=DEF.ripplesCount,ripplesIntensity=DEF.ripplesIntensity/100,ripplesFalloff=DEF.ripplesFalloff/100,ripplesFeather=DEF.ripplesFeather/100;
+let noiseIntensity=DEF.noiseIntensity/100,noiseScale=DEF.noiseScale,noiseTurbulence=DEF.noiseTurbulence/100;
+let noiseSeedX=1234,noiseSeedY=5678,subMode='paint';
+let smudgeIntensity=DEF.smudgeIntensity/100,smudgeLength=DEF.smudgeLength/100,smudgeFalloff=DEF.smudgeFalloff/100;
+let seamless=true,showArrows=true,useBlueChannel=false,showCenterGrid=false,previewSpeed=DEF.previewSpeed/100;
+let refImage=null,_refUrl=null,canvARLocked=true;
+let history=[],histIdx=-1;const MAX_HIST=40;
+let fR,fG,isDrawing=false,lastDX=null,lastDY=null,strokeStartX=null,strokeStartY=null,toolDrag=null;
+let glAnimId=null,glT=0,glLastTS=null;
+let mouseFX=0,mouseFY=0;
+let shiftDown=false,shiftLastMX=null,shiftLockFX=null,shiftLockFY=null,shiftLockCX=null,shiftLockCY=null;
+const IMPLEMENTED=new Set(['brush','smooth','erase','noise','swirl','sphere','smudge','pinch','ripples']);
+const DRAG_TOOLS=new Set(['swirl','sphere','pinch','ripples']);
+const BRUSH_TOOLS=new Set(['brush','smooth','erase','noise','smudge']);
+const TOOL_BY_KEY={q:'brush',w:'erase',e:'smooth',a:'smudge',s:'noise',d:'pinch',z:'swirl',x:'ripples',c:'sphere'};
+const CENTER_SNAP_DIST=15;
+const SUBMODE_TOOLS=new Set(['noise','swirl','pinch','sphere','ripples']);
+const SECTION_CONFIG={brush:{title:'Brush',dir:true,stroke:true,intensity:true,noise:false,smudge:false},smooth:{title:'Smooth Brush',dir:false,stroke:false,intensity:true,noise:false,smudge:false},erase:{title:'Erase Brush',dir:false,stroke:false,intensity:true,noise:false,smudge:false},noise:{title:'Noise Brush',dir:false,stroke:false,intensity:false,noise:true,smudge:false},smudge:{title:'Smudge Brush',dir:false,stroke:false,intensity:false,noise:false,smudge:true}};
+const mainC=document.getElementById('mainCanvas'),mainX=mainC.getContext('2d',{willReadFrequently:true});
+const glC=document.getElementById('glCanvas'),curC=document.getElementById('cursorCanvas'),curX=curC.getContext('2d');
+const area=document.getElementById('canvasArea');
+let gl=null,glProg=null,glVAO=null,glFlowTex=null,glRefTex=null;
+let uTime,uFlow,uRef,uStrength,uHasRef,uBlue,uCanvSize,uAreaSize,uPan,uZoom;
+const VS=`#version 300 es\nin vec2 aPos;out vec2 vUV;\nvoid main(){vUV=aPos*.5+.5;gl_Position=vec4(aPos,0.,1.);}`;
+const FS=`#version 300 es
+precision mediump float;in vec2 vUV;out vec4 oCol;
+uniform sampler2D uFlow,uRef;uniform float uTime,uStrength,uZoom;uniform bool uHasRef,uBlue;uniform vec2 uCanvSize,uAreaSize,uPan;
+void main(){
+  vec2 fragPx=vec2(vUV.x*uAreaSize.x,(1.-vUV.y)*uAreaSize.y);
+  vec2 canvPx=(fragPx-uPan)/uZoom;
+  if(canvPx.x<0.||canvPx.x>uCanvSize.x||canvPx.y<0.||canvPx.y>uCanvSize.y){
+    vec2 c2=floor(gl_FragCoord.xy/7.);float chk=mod(c2.x+c2.y,2.);
+    oCol=vec4(mix(vec3(.13),vec3(.17),chk),1.);return;
+  }
+  vec2 flowUV=canvPx/uCanvSize;
+  vec4 fm=texture(uFlow,flowUV);
+  vec2 flow=(fm.rg-.5)*2.;
+  float t0=mod(uTime,1.),t1=mod(uTime+.5,1.),blend=abs(t0-.5)*2.;
+  if(uHasRef){
+    vec2 uv0=fract(flowUV-flow*t0*uStrength);
+    vec2 uv1=fract(flowUV-flow*t1*uStrength);
+    oCol=mix(texture(uRef,uv0),texture(uRef,uv1),blend);
+  }else{
+    vec2 n=flow*.5;float b=uBlue?sqrt(max(0.,.25-n.x*n.x-n.y*n.y)):-0.5;
+    oCol=vec4(fm.r,fm.g,.5+b,1.);
+  }
+}`;
+function initGL(){try{gl=glC.getContext('webgl2',{alpha:false,premultipliedAlpha:false,antialias:false});if(!gl)return false;const mkSh=(t,s)=>{const sh=gl.createShader(t);gl.shaderSource(sh,s);gl.compileShader(sh);return sh;};glProg=gl.createProgram();gl.attachShader(glProg,mkSh(gl.VERTEX_SHADER,VS));gl.attachShader(glProg,mkSh(gl.FRAGMENT_SHADER,FS));gl.linkProgram(glProg);if(!gl.getProgramParameter(glProg,gl.LINK_STATUS))return false;const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);glVAO=gl.createVertexArray();gl.bindVertexArray(glVAO);const loc=gl.getAttribLocation(glProg,'aPos');gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);uTime=gl.getUniformLocation(glProg,'uTime');uFlow=gl.getUniformLocation(glProg,'uFlow');uRef=gl.getUniformLocation(glProg,'uRef');uStrength=gl.getUniformLocation(glProg,'uStrength');uHasRef=gl.getUniformLocation(glProg,'uHasRef');uBlue=gl.getUniformLocation(glProg,'uBlue');uCanvSize=gl.getUniformLocation(glProg,'uCanvSize');uAreaSize=gl.getUniformLocation(glProg,'uAreaSize');uPan=gl.getUniformLocation(glProg,'uPan');uZoom=gl.getUniformLocation(glProg,'uZoom');glFlowTex=mkTex();glRefTex=mkTex();return true;}catch(e){return false;}}
+function mkTex(){const t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.REPEAT);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.REPEAT);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);return t;}
+function uploadFlow(){if(!gl)return;const px=new Uint8Array(canvW*canvH*4);for(let i=0;i<canvW*canvH;i++){px[i*4]=Math.round(fR[i]*255);px[i*4+1]=Math.round(fG[i]*255);px[i*4+2]=128;px[i*4+3]=255;}gl.bindTexture(gl.TEXTURE_2D,glFlowTex);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,canvW,canvH,0,gl.RGBA,gl.UNSIGNED_BYTE,px);}
+function uploadRef(img){if(!gl||!img)return;gl.bindTexture(gl.TEXTURE_2D,glRefTex);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,img);}
+function renderGL(ts){if(!gl||viewMode!=='preview'){glAnimId=null;return;}if(glLastTS===null)glLastTS=ts;const dt=(ts-glLastTS)/1000;glLastTS=ts;glT=(glT+dt*0.25)%100;const dpr=window.devicePixelRatio||1,ar=area.getBoundingClientRect(),cw=Math.round(ar.width*dpr),ch=Math.round(ar.height*dpr);if(glC.width!==cw||glC.height!==ch){glC.width=cw;glC.height=ch;glC.style.width=ar.width+'px';glC.style.height=ar.height+'px';}gl.viewport(0,0,cw,ch);gl.useProgram(glProg);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,glFlowTex);gl.uniform1i(uFlow,0);gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,glRefTex);gl.uniform1i(uRef,1);gl.uniform1f(uTime,glT);gl.uniform1f(uStrength,previewSpeed);gl.uniform1i(uHasRef,refImage?1:0);gl.uniform1i(uBlue,useBlueChannel?1:0);gl.uniform2f(uCanvSize,canvW,canvH);gl.uniform2f(uAreaSize,ar.width,ar.height);gl.uniform2f(uPan,panX,panY);gl.uniform1f(uZoom,zoom);gl.bindVertexArray(glVAO);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);glAnimId=requestAnimationFrame(renderGL);}
+function startGL(){if(glAnimId)cancelAnimationFrame(glAnimId);glLastTS=null;glC.style.display='';mainC.style.opacity='0.0';curX.clearRect(0,0,curC.width,curC.height);if(showCenterGrid)drawCenterGrid();glAnimId=requestAnimationFrame(renderGL);}
+function stopGL(){if(glAnimId){cancelAnimationFrame(glAnimId);glAnimId=null;}glC.style.display='none';mainC.style.opacity='1';}
+function initFlow(w,h,keepOld){_invalidateNoiseCache();const nr=new Float32Array(w*h).fill(.5),ng=new Float32Array(w*h).fill(.5);if(keepOld&&fR){const ow=canvW,oh=canvH;for(let y=0;y<h;y++)for(let x=0;x<w;x++){const sx=Math.min(Math.round(x*ow/w),ow-1),sy=Math.min(Math.round(y*oh/h),oh-1);nr[y*w+x]=fR[sy*ow+sx];ng[y*w+x]=fG[sy*ow+sx];}}fR=nr;fG=ng;canvW=w;canvH=h;mainC.width=w;mainC.height=h;updateFooterRes();redraw();uploadFlow();syncCursorCanvas();}
+function updateFooterRes(){document.getElementById('canvW').value=canvW;document.getElementById('canvH').value=canvH;document.getElementById('footerRes').innerHTML='<span class="res-val">'+canvW+'</span><span class="res-unit"> px</span> <span class="res-x">\u00D7</span> <span class="res-val">'+canvH+'</span><span class="res-unit"> px</span>';}
+function redraw(){const id=mainX.createImageData(canvW,canvH),d=id.data;for(let i=0;i<canvW*canvH;i++){const r=c255(fR[i]*255),g=c255(fG[i]*255);let b=0;if(useBlueChannel){const dx=fR[i]-.5,dy=fG[i]-.5;b=c255((Math.sqrt(Math.max(0,.25-dx*dx-dy*dy))+.5)*255);}if(viewMode==='r'){d[i*4]=r;d[i*4+1]=0;d[i*4+2]=0;d[i*4+3]=255;}else if(viewMode==='g'){d[i*4]=0;d[i*4+1]=g;d[i*4+2]=0;d[i*4+3]=255;}else{d[i*4]=r;d[i*4+1]=g;d[i*4+2]=b;d[i*4+3]=255;}}mainX.putImageData(id,0,0);if(viewMode!=='preview')drawArrows();uploadFlow();}
+const c255=v=>Math.max(0,Math.min(255,Math.round(v)));
+function drawArrows(){if(viewMode==='preview')return;curX.clearRect(0,0,curC.width,curC.height);if(showCenterGrid)drawCenterGrid();if(!showArrows)return;const STEP=Math.max(16,Math.min(64,Math.round(Math.min(canvW,canvH)/12)));if(STEP*zoom<8)return;curX.save();curX.translate(panX,panY);curX.scale(zoom,zoom);for(let row=0;row<canvH;row+=STEP)for(let col=0;col<canvW;col+=STEP){const i=row*canvW+col,fr=fR[i]-.5,fg=fG[i]-.5,mag=Math.sqrt(fr*fr+fg*fg);if(mag<.01)continue;const cx=col+STEP*.5,cy=row+STEP*.5,nx=fr/mag,ny=fg/mag,len=STEP*.44;curX.save();curX.globalAlpha=Math.min(1,mag*5)*.7;curX.strokeStyle='#e8a020';curX.fillStyle='#e8a020';curX.lineWidth=1.2/zoom;const ax=cx-nx*len*.45,ay=cy-ny*len*.45,bx=cx+nx*len*.45,by=cy+ny*len*.45;curX.beginPath();curX.moveTo(ax,ay);curX.lineTo(bx,by);curX.stroke();const ang=Math.atan2(ny,nx),hs=STEP*.11;curX.beginPath();curX.moveTo(bx,by);curX.lineTo(bx-Math.cos(ang-.5)*hs,by-Math.sin(ang-.5)*hs);curX.lineTo(bx-Math.cos(ang+.5)*hs,by-Math.sin(ang+.5)*hs);curX.closePath();curX.fill();curX.restore();}curX.restore();}
+function drawCenterGrid(){if(!showCenterGrid)return;curX.save();curX.strokeStyle='rgba(232,160,32,0.50)';curX.lineWidth=1;const vx=Math.round(panX+canvW*zoom*.5)+.5;curX.beginPath();curX.moveTo(vx,Math.round(panY));curX.lineTo(vx,Math.round(panY+canvH*zoom));curX.stroke();const hy=Math.round(panY+canvH*zoom*.5)+.5;curX.beginPath();curX.moveTo(Math.round(panX),hy);curX.lineTo(Math.round(panX+canvW*zoom),hy);curX.stroke();curX.restore();}
+function drawCenterLabel(){if(!showCenterGrid)return;const centerX=canvW*.5,centerY=canvH*.5;const distC=Math.sqrt((mouseFX-centerX)**2+(mouseFY-centerY)**2);if(distC>CENTER_SNAP_DIST/zoom)return;const scx=panX+centerX*zoom,scy=panY+centerY*zoom;curX.save();curX.fillStyle='rgba(232,160,32,0.9)';curX.font='bold 9px "DM Mono", monospace';curX.textAlign='center';curX.textBaseline='bottom';curX.fillText('Center',scx,scy-10);curX.restore();}
+function isNearCenter(fx,fy){const cx=canvW*.5,cy=canvH*.5;return Math.sqrt((fx-cx)**2+(fy-cy)**2)<CENTER_SNAP_DIST/zoom;}
+function saveHist(){history=history.slice(0,histIdx+1);history.push({r:new Float32Array(fR),g:new Float32Array(fG),w:canvW,h:canvH});if(history.length>MAX_HIST)history.shift();histIdx=history.length-1;updHistBtns();}
+function undo(){if(histIdx<=0)return;histIdx--;applyHist();}
+function redo(){if(histIdx>=history.length-1)return;histIdx++;applyHist();}
+function applyHist(){const s=history[histIdx];canvW=s.w;canvH=s.h;fR=new Float32Array(s.r);fG=new Float32Array(s.g);mainC.width=s.w;mainC.height=s.h;updateFooterRes();redraw();updHistBtns();}
+function updHistBtns(){document.getElementById('undoBtn').disabled=histIdx<=0;document.getElementById('redoBtn').disabled=histIdx>=history.length-1;}
+function softFalloff(dist,radius){const r=dist/radius;if(r>=1)return 0;const h=Math.min(brushHardness,.98);if(r<=h)return 1;const t=(r-h)/(1-h);return Math.exp(-t*t*4)*(1-t);}
+function _ihash(x,y,seed){let h=(x*1619+y*31337+seed*6971)|0;h=Math.imul(h^(h>>>16),0x45d9f3b);h=Math.imul(h^(h>>>16),0x45d9f3b);h=h^(h>>>16);return(h>>>0)/4294967296;}
+const _GVEC=[[1,0],[1,1],[0,1],[-1,1],[-1,0],[-1,-1],[0,-1],[1,-1]];
+function _gnoise(fx,fy,seed,wrapX,wrapY){const ix=Math.floor(fx)|0,iy=Math.floor(fy)|0;const tx=fx-ix,ty=fy-iy;const sx=tx*tx*(3-2*tx),sy=ty*ty*(3-2*ty);function grad(gx,gy,dx,dy){if(wrapX>0)gx=((gx%wrapX)+wrapX)%wrapX;if(wrapY>0)gy=((gy%wrapY)+wrapY)%wrapY;const g=_GVEC[(_ihash(gx,gy,seed)*8)|0];return g[0]*dx+g[1]*dy;}const g00=grad(ix,iy,tx,ty);const g10=grad(ix+1,iy,tx-1,ty);const g01=grad(ix,iy+1,tx,ty-1);const g11=grad(ix+1,iy+1,tx-1,ty-1);const lx0=g00+(g10-g00)*sx;const lx1=g01+(g11-g01)*sx;return(lx0+(lx1-lx0)*sy)*0.5+0.5;}
+function _fbmFast(px,py,seed){let fX=noiseScale*0.4,fY=noiseScale*0.4;if(seamless){fX=Math.max(1,Math.round(fX));fY=Math.max(1,Math.round(fY));}const pers=0.15+noiseTurbulence*0.7;let v=0,a=1,t=0;for(let i=0;i<3;i++){const nx=(px+noiseSeedX)*fX/canvW;const ny=(py+noiseSeedY)*fY/canvH;v+=_gnoise(nx,ny,seed+i*7919,seamless?fX:0,seamless?fY:0)*a;t+=a;a*=pers;fX=seamless?Math.round(fX*2.03):fX*2.03;fY=seamless?Math.round(fY*1.97):fY*1.97;}return(v/t-0.5)*0.65+0.5;}
+function _noiseXY(px,py){return[_fbmFast(px,py,noiseSeedX),_fbmFast(px,py,noiseSeedY)];}
+let noiseCacheR=null,noiseCacheG=null,noiseCacheValid=null,noiseCacheKey='';function _validateNoiseCache(){const key=canvW+'_'+canvH+'_'+noiseScale+'_'+noiseTurbulence+'_'+seamless;if(noiseCacheKey!==key){const sz=canvW*canvH;noiseCacheR=new Float32Array(sz);noiseCacheG=new Float32Array(sz);noiseCacheValid=new Uint8Array(sz);noiseCacheKey=key;}}function _getCachedNoise(px,py){const idx=py*canvW+px;if(noiseCacheValid[idx]===0){const[nR,nG]=_noiseXY(px,py);noiseCacheR[idx]=nR;noiseCacheG[idx]=nG;noiseCacheValid[idx]=1;}return[noiseCacheR[idx],noiseCacheG[idx]];}
+function _invalidateNoiseCache(){}
+function paintBrushAt(fx,fy,angle){const rad=brushSize*.5;const _dx=Math.cos(angle*Math.PI/180),_dy=Math.sin(angle*Math.PI/180);const tx=Math.max(0,Math.min(1,.5+_dx*brushIntensity)),ty=Math.max(0,Math.min(1,.5+_dy*brushIntensity));const _fw=seamless&&rad*2>=canvW,_fh=seamless&&rad*2>=canvH;const x0=_fw?0:Math.floor(fx-rad),x1=_fw?canvW-1:Math.ceil(fx+rad),y0=_fh?0:Math.floor(fy-rad),y1=_fh?canvH-1:Math.ceil(fy+rad);for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){let dist;if(seamless){let ddx=((x-fx)%canvW+canvW)%canvW;if(ddx>canvW/2)ddx-=canvW;let ddy=((y-fy)%canvH+canvH)%canvH;if(ddy>canvH/2)ddy-=canvH;dist=Math.sqrt(ddx*ddx+ddy*ddy);}else{dist=Math.sqrt((x-fx)**2+(y-fy)**2);}const w=softFalloff(dist,rad);if(w<=0)continue;let px=x,py=y;if(seamless){px=((x%canvW)+canvW)%canvW;py=((y%canvH)+canvH)%canvH;}if(px<0||px>=canvW||py<0||py>=canvH)continue;const i=py*canvW+px,blend=w*.4;fR[i]=Math.max(0,Math.min(1,fR[i]+(tx-fR[i])*blend));fG[i]=Math.max(0,Math.min(1,fG[i]+(ty-fG[i])*blend));}}
+function paintBrushSeg(x0,y0,x1,y1,angle){const dx=x1-x0,dy=y1-y0,dist=Math.sqrt(dx*dx+dy*dy),sp=Math.max(.5,brushSize*.1),steps=Math.max(1,Math.ceil(dist/sp));for(let i=0;i<=steps;i++){const t=i/steps;paintBrushAt(x0+dx*t,y0+dy*t,angle);}}
+function paintNoiseAt(fx,fy){_validateNoiseCache();const rad=brushSize*.5;const rad2=rad*rad;const _fw=seamless&&rad*2>=canvW,_fh=seamless&&rad*2>=canvH;const x0=_fw?0:Math.floor(fx-rad),x1=_fw?canvW-1:Math.ceil(fx+rad),y0=_fh?0:Math.floor(fy-rad),y1=_fh?canvH-1:Math.ceil(fy+rad);const step=1;for(let y=y0;y<=y1;y+=step)for(let x=x0;x<=x1;x+=step){let dist2;if(seamless){let ddx=((x-fx)%canvW+canvW)%canvW;if(ddx>canvW/2)ddx-=canvW;let ddy=((y-fy)%canvH+canvH)%canvH;if(ddy>canvH/2)ddy-=canvH;dist2=ddx*ddx+ddy*ddy;}else{const dx=x-fx,dy=y-fy;dist2=dx*dx+dy*dy;}if(dist2>=rad2)continue;const dist=Math.sqrt(dist2);const w=softFalloff(dist,rad);if(w<=0)continue;let px=x,py=y;if(seamless){px=((x%canvW)+canvW)%canvW;py=((y%canvH)+canvH)%canvH;}if(px<0||px>=canvW||py<0||py>=canvH)continue;const i=py*canvW+px;const [nR,nG]=_getCachedNoise(px,py);const tgtR=Math.max(0,Math.min(1,.5+(nR-.5)*noiseIntensity*2));const tgtG=Math.max(0,Math.min(1,.5+(nG-.5)*noiseIntensity*2));const blend=w*.55;fR[i]+=(tgtR-fR[i])*blend;fG[i]+=(tgtG-fG[i])*blend;}}
+function paintNoiseSeg(x0,y0,x1,y1){const dx=x1-x0,dy=y1-y0,dist=Math.sqrt(dx*dx+dy*dy),sp=Math.max(.5,brushSize*.1),steps=Math.max(1,Math.ceil(dist/sp));for(let i=0;i<=steps;i++){const t=i/steps;paintNoiseAt(x0+dx*t,y0+dy*t);}}
+function bilinearFlowSample(sx,sy,sR,sG){sR=sR||fR;sG=sG||fG;let x=sx,y=sy;if(seamless){x=((x%canvW)+canvW)%canvW;y=((y%canvH)+canvH)%canvH;}else{x=Math.max(0,Math.min(canvW-1,x));y=Math.max(0,Math.min(canvH-1,y));}const x0=Math.floor(x),y0=Math.floor(y);let x1=x0+1,y1=y0+1;if(seamless){if(x1>=canvW)x1=0;if(y1>=canvH)y1=0;}else{if(x1>=canvW)x1=canvW-1;if(y1>=canvH)y1=canvH-1;}const fx=x-x0,fy=y-y0;const w00=(1-fx)*(1-fy),w10=fx*(1-fy),w01=(1-fx)*fy,w11=fx*fy;const i00=y0*canvW+x0,i10=y0*canvW+x1,i01=y1*canvW+x0,i11=y1*canvW+x1;return[sR[i00]*w00+sR[i10]*w10+sR[i01]*w01+sR[i11]*w11,sG[i00]*w00+sG[i10]*w10+sG[i01]*w01+sG[i11]*w11];}
+function paintNoiseDistortAt(fx,fy){_validateNoiseCache();const rad=brushSize*.5;const rad2=rad*rad;const maxDisp=noiseIntensity*32;const _fw=seamless&&rad*2>=canvW,_fh=seamless&&rad*2>=canvH;const x0=_fw?0:Math.floor(fx-rad),x1=_fw?canvW-1:Math.ceil(fx+rad),y0=_fh?0:Math.floor(fy-rad),y1=_fh?canvH-1:Math.ceil(fy+rad);const step=1;for(let y=y0;y<=y1;y+=step)for(let x=x0;x<=x1;x+=step){let dist2;if(seamless){let ddx=((x-fx)%canvW+canvW)%canvW;if(ddx>canvW/2)ddx-=canvW;let ddy=((y-fy)%canvH+canvH)%canvH;if(ddy>canvH/2)ddy-=canvH;dist2=ddx*ddx+ddy*ddy;}else{const dx=x-fx,dy=y-fy;dist2=dx*dx+dy*dy;}if(dist2>=rad2)continue;const dist=Math.sqrt(dist2);const w=softFalloff(dist,rad);if(w<=0)continue;let px=x,py=y;if(seamless){px=((x%canvW)+canvW)%canvW;py=((y%canvH)+canvH)%canvH;}if(px<0||px>=canvW||py<0||py>=canvH)continue;const[sDX,sDY]=_getCachedNoise(px,py);const dxN=(sDX-0.5)*2,dyN=(sDY-0.5)*2;const srcX=px+dxN*maxDisp,srcY=py+dyN*maxDisp;const[srcR,srcG]=bilinearFlowSample(srcX,srcY);const i=py*canvW+px,blend=w*0.22;fR[i]+=(srcR-fR[i])*blend;fG[i]+=(srcG-fG[i])*blend;}}
+function paintNoiseDistortSeg(x0,y0,x1,y1){const dx=x1-x0,dy=y1-y0,dist=Math.sqrt(dx*dx+dy*dy),sp=Math.max(.5,brushSize*.1),steps=Math.max(1,Math.ceil(dist/sp));for(let i=0;i<=steps;i++){const t=i/steps;paintNoiseDistortAt(x0+dx*t,y0+dy*t);}}
+function paintSwirlAt(fx,fy,rad,cw,dragAngle){const sign=cw?1:-1;const big=seamless&&(rad>=canvW/2||rad>=canvH/2);if(big){const sz=canvW*canvH;const sr=new Float32Array(sz),sg=new Float32Array(sz),sw=new Float32Array(sz);for(let ny=-1;ny<=1;ny++)for(let nx=-1;nx<=1;nx++){const cx=fx+nx*canvW,cy=fy+ny*canvH;const x0=seamless?Math.floor(cx-rad):Math.max(0,Math.floor(cx-rad)),x1=seamless?Math.ceil(cx+rad):Math.min(canvW-1,Math.ceil(cx+rad)),y0=seamless?Math.floor(cy-rad):Math.max(0,Math.floor(cy-rad)),y1=seamless?Math.ceil(cy+rad):Math.min(canvH-1,Math.ceil(cy+rad));if(x0>x1||y0>y1)continue;for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const ddx=x-cx,ddy=y-cy;const dist=Math.sqrt(ddx*ddx+ddy*ddy);if(dist>=rad||dist<.001)continue;const theta=Math.atan2(ddy,ddx);const t=dist/rad;const cf=Math.min(1,dist/(rad*.06));const outerBand=Math.max(0.01,1-swirlFeather);const edgeT=t<(1-outerBand)?1:(Math.max(0,(1-t)/outerBand));const edgeSoft=edgeT*edgeT*(3-2*edgeT);const wCore=Math.pow(1-t,swirlFalloff*2+0.1);const w=wCore*edgeSoft*cf;const rt=theta-(dragAngle||0);const fa=rt+sign*(Math.PI/2+swirlTurns*2*Math.PI*(1-t)*(1-t));const tgtR=Math.max(0,Math.min(1,.5+Math.cos(fa)*swirlIntensity));const tgtG=Math.max(0,Math.min(1,.5+Math.sin(fa)*swirlIntensity));const i=y*canvW+x;sr[i]+=tgtR*w;sg[i]+=tgtG*w;sw[i]+=w;}}for(let i=0;i<sz;i++){if(sw[i]>0){const blend=Math.min(1,sw[i])*.7;fR[i]+=(sr[i]/sw[i]-fR[i])*blend;fG[i]+=(sg[i]/sw[i]-fG[i])*blend;}}}else{const x0=seamless?Math.floor(fx-rad):Math.max(0,Math.floor(fx-rad)),x1=seamless?Math.ceil(fx+rad):Math.min(canvW-1,Math.ceil(fx+rad)),y0=seamless?Math.floor(fy-rad):Math.max(0,Math.floor(fy-rad)),y1=seamless?Math.ceil(fy+rad):Math.min(canvH-1,Math.ceil(fy+rad));for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){let ddx,ddy;if(seamless){ddx=((x-fx)%canvW+canvW)%canvW;if(ddx>canvW/2)ddx-=canvW;ddy=((y-fy)%canvH+canvH)%canvH;if(ddy>canvH/2)ddy-=canvH;}else{ddx=x-fx;ddy=y-fy;}const dist=Math.sqrt(ddx*ddx+ddy*ddy);if(dist>=rad||dist<.001)continue;const theta=Math.atan2(ddy,ddx);const t=dist/rad;const cf=Math.min(1,dist/(rad*.06));const outerBand=Math.max(0.01,1-swirlFeather);const edgeT=t<(1-outerBand)?1:(Math.max(0,(1-t)/outerBand));const edgeSoft=edgeT*edgeT*(3-2*edgeT);const wCore=Math.pow(1-t,swirlFalloff*2+0.1);const w=wCore*edgeSoft*cf;const rt=theta-(dragAngle||0);const fa=rt+sign*(Math.PI/2+swirlTurns*2*Math.PI*(1-t)*(1-t));const tgtR=Math.max(0,Math.min(1,.5+Math.cos(fa)*swirlIntensity));const tgtG=Math.max(0,Math.min(1,.5+Math.sin(fa)*swirlIntensity));let px=x,py=y;if(seamless){px=((x%canvW)+canvW)%canvW;py=((y%canvH)+canvH)%canvH;}if(px<0||px>=canvW||py<0||py>=canvH)continue;const i=py*canvW+px,blend=w*.7;fR[i]+=(tgtR-fR[i])*blend;fG[i]+=(tgtG-fG[i])*blend;}}}
+function paintSwirlDistortAt(fx,fy,rad,cw,dragAngle){const sign=cw?1:-1;const big=seamless&&(rad>=canvW/2||rad>=canvH/2);const x0=big?0:Math.floor(fx-rad),x1=big?canvW-1:Math.ceil(fx+rad),y0=big?0:Math.floor(fy-rad),y1=big?canvH-1:Math.ceil(fy+rad);const cR=new Float32Array(fR),cG=new Float32Array(fG);for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){let ddx,ddy;if(seamless){ddx=((x-fx)%canvW+canvW)%canvW;if(ddx>canvW/2)ddx-=canvW;ddy=((y-fy)%canvH+canvH)%canvH;if(ddy>canvH/2)ddy-=canvH;}else{ddx=x-fx;ddy=y-fy;}const dist=Math.sqrt(ddx*ddx+ddy*ddy);if(dist>=rad||dist<.001)continue;const theta=Math.atan2(ddy,ddx);const t=dist/rad;const cf=Math.min(1,dist/(rad*.06));const outerBand=Math.max(0.01,1-swirlFeather);const edgeT=t<(1-outerBand)?1:(Math.max(0,(1-t)/outerBand));const edgeSoft=edgeT*edgeT*(3-2*edgeT);const wCore=Math.pow(1-t,swirlFalloff*2+0.1);const w=wCore*edgeSoft*cf;if(w<=0)continue;const twist=sign*swirlTurns*2*Math.PI*(1-t)*(1-t)*swirlIntensity;const offset=dragAngle||0;const rot=twist+offset;const sampleTheta=theta-rot;const srcX=fx+dist*Math.cos(sampleTheta);const srcY=fy+dist*Math.sin(sampleTheta);const[srcR,srcG]=bilinearFlowSample(srcX,srcY,cR,cG);const vx=(srcR-0.5)*2,vy=(srcG-0.5)*2,cosR=Math.cos(rot),sinR=Math.sin(rot),rotR=(vx*cosR-vy*sinR)*0.5+0.5,rotG=(vx*sinR+vy*cosR)*0.5+0.5;let px=x,py=y;if(seamless){px=((x%canvW)+canvW)%canvW;py=((y%canvH)+canvH)%canvH;}if(px<0||px>=canvW||py<0||py>=canvH)continue;const i=py*canvW+px,blend=w*.7;fR[i]+=(rotR-fR[i])*blend;fG[i]+=(rotG-fG[i])*blend;}}
+function paintSphereStamp(cx,cy,rad){const big=seamless&&(rad>=canvW/2||rad>=canvH/2);if(big){const sz=canvW*canvH;const sr=new Float32Array(sz),sg=new Float32Array(sz),sw=new Float32Array(sz);for(let ny=-1;ny<=1;ny++)for(let nx=-1;nx<=1;nx++){const ccx=cx+nx*canvW,ccy=cy+ny*canvH;const x0=Math.max(0,Math.floor(ccx-rad)),x1=Math.min(canvW-1,Math.ceil(ccx+rad)),y0=Math.max(0,Math.floor(ccy-rad)),y1=Math.min(canvH-1,Math.ceil(ccy+rad));if(x0>x1||y0>y1)continue;for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const ddx=x-ccx,ddy=y-ccy;const dist=Math.sqrt(ddx*ddx+ddy*ddy);if(dist>=rad||dist<.001)continue;const t=dist/rad;const w=Math.pow(1-t*t,sphereFalloff)*(1-t*(1-sphereFeather));if(w<=0)continue;const tgtR=Math.max(0,Math.min(1,.5+(ddx/rad)*sphereIntensity));const tgtG=Math.max(0,Math.min(1,.5+(ddy/rad)*sphereIntensity));const i=y*canvW+x;sr[i]+=tgtR*w;sg[i]+=tgtG*w;sw[i]+=w;}}for(let i=0;i<sz;i++){if(sw[i]>0){const blend=Math.min(1,sw[i])*.8;fR[i]+=(sr[i]/sw[i]-fR[i])*blend;fG[i]+=(sg[i]/sw[i]-fG[i])*blend;}}}else{const x0=seamless?Math.floor(cx-rad):Math.max(0,Math.floor(cx-rad)),x1=seamless?Math.ceil(cx+rad):Math.min(canvW-1,Math.ceil(cx+rad)),y0=seamless?Math.floor(cy-rad):Math.max(0,Math.floor(cy-rad)),y1=seamless?Math.ceil(cy+rad):Math.min(canvH-1,Math.ceil(cy+rad));for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){let ddx,ddy;if(seamless){ddx=((x-cx)%canvW+canvW)%canvW;if(ddx>canvW/2)ddx-=canvW;ddy=((y-cy)%canvH+canvH)%canvH;if(ddy>canvH/2)ddy-=canvH;}else{ddx=x-cx;ddy=y-cy;}const dist=Math.sqrt(ddx*ddx+ddy*ddy);if(dist>=rad||dist<.001)continue;const t=dist/rad;const w=Math.pow(1-t*t,sphereFalloff)*(1-t*(1-sphereFeather));if(w<=0)continue;const tgtR=Math.max(0,Math.min(1,.5+(ddx/rad)*sphereIntensity));const tgtG=Math.max(0,Math.min(1,.5+(ddy/rad)*sphereIntensity));let px=x,py=y;if(seamless){px=((x%canvW)+canvW)%canvW;py=((y%canvH)+canvH)%canvH;}if(px<0||px>=canvW||py<0||py>=canvH)continue;const i=py*canvW+px,blend=w*.8;fR[i]+=(tgtR-fR[i])*blend;fG[i]+=(tgtG-fG[i])*blend;}}}
+function paintSphereDistortStamp(cx,cy,rad){const big=seamless&&(rad>=canvW/2||rad>=canvH/2);const x0=big?0:Math.floor(cx-rad),x1=big?canvW-1:Math.ceil(cx+rad),y0=big?0:Math.floor(cy-rad),y1=big?canvH-1:Math.ceil(cy+rad);const cR=new Float32Array(fR),cG=new Float32Array(fG);for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){let ddx,ddy;if(seamless){ddx=((x-cx)%canvW+canvW)%canvW;if(ddx>canvW/2)ddx-=canvW;ddy=((y-cy)%canvH+canvH)%canvH;if(ddy>canvH/2)ddy-=canvH;}else{ddx=x-cx;ddy=y-cy;}const dist=Math.sqrt(ddx*ddx+ddy*ddy);if(dist>=rad||dist<.001)continue;const t=dist/rad;const w=Math.pow(1-t*t,sphereFalloff)*(1-t*(1-sphereFeather));if(w<=0)continue;const theta=Math.atan2(ddy,ddx);const sampleDist=dist*Math.max(0.01,1-sphereIntensity*w*0.5);const srcX=cx+sampleDist*Math.cos(theta);const srcY=cy+sampleDist*Math.sin(theta);const[srcR,srcG]=bilinearFlowSample(srcX,srcY,cR,cG);let px=x,py=y;if(seamless){px=((x%canvW)+canvW)%canvW;py=((y%canvH)+canvH)%canvH;}if(px<0||px>=canvW||py<0||py>=canvH)continue;const i=py*canvW+px,blend=w*.8;fR[i]+=(srcR-fR[i])*blend;fG[i]+=(srcG-fG[i])*blend;}}
+function paintPinchStamp(cx,cy,rad,outward){const sign=outward?1:-1;const baseRotRad=pinchRotation*Math.PI*0.5;const big=seamless&&(rad>=canvW/2||rad>=canvH/2);if(big){const sz=canvW*canvH;const sr=new Float32Array(sz),sg=new Float32Array(sz),sw=new Float32Array(sz);for(let ny=-1;ny<=1;ny++)for(let nx=-1;nx<=1;nx++){const ccx=cx+nx*canvW,ccy=cy+ny*canvH;const x0=Math.max(0,Math.floor(ccx-rad)),x1=Math.min(canvW-1,Math.ceil(ccx+rad)),y0=Math.max(0,Math.floor(ccy-rad)),y1=Math.min(canvH-1,Math.ceil(ccy+rad));if(x0>x1||y0>y1)continue;for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const ddx=x-ccx,ddy=y-ccy;const dist=Math.sqrt(ddx*ddx+ddy*ddy);if(dist>=rad||dist<.001)continue;const t=dist/rad;const outerBand=Math.max(0.01,1-pinchFeather);const edgeT=t<(1-outerBand)?1:(Math.max(0,(1-t)/outerBand));const edgeSoft=edgeT*edgeT*(3-2*edgeT);const wCore=Math.pow(1-t,pinchFalloff*3+0.1);const w=wCore*edgeSoft;if(w<=0)continue;const rotScale=(1-t)*(1-t);const effectiveRot=baseRotRad*rotScale;const baseAngle=Math.atan2(ddy,ddx)+effectiveRot;const nx2=Math.cos(baseAngle),ny2=Math.sin(baseAngle);const tgtR=Math.max(0,Math.min(1,.5+sign*nx2*pinchIntensity));const tgtG=Math.max(0,Math.min(1,.5+sign*ny2*pinchIntensity));const i=y*canvW+x;sr[i]+=tgtR*w;sg[i]+=tgtG*w;sw[i]+=w;}}for(let i=0;i<sz;i++){if(sw[i]>0){const blend=Math.min(1,sw[i])*.8;fR[i]+=(sr[i]/sw[i]-fR[i])*blend;fG[i]+=(sg[i]/sw[i]-fG[i])*blend;}}}else{const x0=seamless?Math.floor(cx-rad):Math.max(0,Math.floor(cx-rad)),x1=seamless?Math.ceil(cx+rad):Math.min(canvW-1,Math.ceil(cx+rad)),y0=seamless?Math.floor(cy-rad):Math.max(0,Math.floor(cy-rad)),y1=seamless?Math.ceil(cy+rad):Math.min(canvH-1,Math.ceil(cy+rad));for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){let ddx,ddy;if(seamless){ddx=((x-cx)%canvW+canvW)%canvW;if(ddx>canvW/2)ddx-=canvW;ddy=((y-cy)%canvH+canvH)%canvH;if(ddy>canvH/2)ddy-=canvH;}else{ddx=x-cx;ddy=y-cy;}const dist=Math.sqrt(ddx*ddx+ddy*ddy);if(dist>=rad||dist<.001)continue;const t=dist/rad;const outerBand=Math.max(0.01,1-pinchFeather);const edgeT=t<(1-outerBand)?1:(Math.max(0,(1-t)/outerBand));const edgeSoft=edgeT*edgeT*(3-2*edgeT);const wCore=Math.pow(1-t,pinchFalloff*3+0.1);const w=wCore*edgeSoft;if(w<=0)continue;const rotScale=(1-t)*(1-t);const effectiveRot=baseRotRad*rotScale;const baseAngle=Math.atan2(ddy,ddx)+effectiveRot;const nx2=Math.cos(baseAngle),ny2=Math.sin(baseAngle);const tgtR=Math.max(0,Math.min(1,.5+sign*nx2*pinchIntensity));const tgtG=Math.max(0,Math.min(1,.5+sign*ny2*pinchIntensity));let px=x,py=y;if(seamless){px=((x%canvW)+canvW)%canvW;py=((y%canvH)+canvH)%canvH;}if(px<0||px>=canvW||py<0||py>=canvH)continue;const i=py*canvW+px,blend=w*.8;fR[i]+=(tgtR-fR[i])*blend;fG[i]+=(tgtG-fG[i])*blend;}}}
+function paintPinchDistortStamp(cx,cy,rad,outward){
+const baseRotRad=pinchRotation*Math.PI*0.5;
+const big=seamless&&(rad>=canvW/2||rad>=canvH/2);
+const x0=big?0:Math.floor(cx-rad),x1=big?canvW-1:Math.ceil(cx+rad);
+const y0=big?0:Math.floor(cy-rad),y1=big?canvH-1:Math.ceil(cy+rad);
+const cR=new Float32Array(fR),cG=new Float32Array(fG);
+
+// Non-linear scaling of pinchIntensity:
+// - Raised minimum intensity at the low end (pinchIntensity -> 0) to be slightly visible
+// - 3x stronger at the high end (pinchIntensity = 1.0)
+const effIntensity = pinchIntensity * (1.8 * pinchIntensity + 1.2);
+const strengthFactor = effIntensity * 0.9;
+
+for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
+let ddx,ddy;
+if(seamless){ddx=((x-cx)%canvW+canvW)%canvW;if(ddx>canvW/2)ddx-=canvW;ddy=((y-cy)%canvH+canvH)%canvH;if(ddy>canvH/2)ddy-=canvH;}
+else{ddx=x-cx;ddy=y-cy;}
+const dist=Math.sqrt(ddx*ddx+ddy*ddy);
+if(dist>=rad||dist<.001)continue;
+const t=dist/rad;
+const outerBand=Math.max(0.01,1-pinchFeather);
+const edgeT=t<(1-outerBand)?1:(Math.max(0,(1-t)/outerBand));
+const edgeSoft=edgeT*edgeT*(3-2*edgeT);
+const wCore=Math.pow(1-t,pinchFalloff*3+0.1);
+const w=wCore*edgeSoft;
+if(w<=0)continue;
+
+const theta=Math.atan2(ddy,ddx);
+const rotScale=(1-t)*(1-t);
+// Rotation twist is perfectly scaled by the intensity, sign is inverted to correct direction!
+const rot = -baseRotRad * rotScale * effIntensity;
+
+// Symmetric radial displacement using multiplicative inverses:
+let sampleDist;
+let boost = 1.0;
+if (outward) {
+    sampleDist = dist / (1 + w * strengthFactor);
+    boost = 1.0 + w * effIntensity * 0.5; // Boost flow vector magnitude when expanding space
+} else {
+    sampleDist = dist * (1 + w * strengthFactor);
+}
+
+const sampleTheta=theta-rot;
+const srcX=cx+sampleDist*Math.cos(sampleTheta);
+const srcY=cy+sampleDist*Math.sin(sampleTheta);
+const[srcR,srcG]=bilinearFlowSample(srcX,srcY,cR,cG);
+
+// Rotate and boost sampled flow vector to match spatial twist and expand boost
+const vx=(srcR-0.5)*2,vy=(srcG-0.5)*2;
+const cosR=Math.cos(rot),sinR=Math.sin(rot);
+const rotR=Math.max(0,Math.min(1,(vx*cosR-vy*sinR)*boost*0.5+0.5));
+const rotG=Math.max(0,Math.min(1,(vx*sinR+vy*cosR)*boost*0.5+0.5));
+
+let px=x,py=y;
+if(seamless){px=((x%canvW)+canvW)%canvW;py=((y%canvH)+canvH)%canvH;}
+if(px<0||px>=canvW||py<0||py>=canvH)continue;
+const i=py*canvW+px,blend=w*0.8;
+fR[i]+=(rotR-fR[i])*blend;
+fG[i]+=(rotG-fG[i])*blend;
+}
+}
+function paintRipplesStamp(cx,cy,rad){const big=seamless&&(rad>=canvW/2||rad>=canvH/2);if(big){const sz=canvW*canvH;const sr=new Float32Array(sz),sg=new Float32Array(sz),sw=new Float32Array(sz);for(let ny=-1;ny<=1;ny++)for(let nx=-1;nx<=1;nx++){const ccx=cx+nx*canvW,ccy=cy+ny*canvH;const x0=Math.max(0,Math.floor(ccx-rad)),x1=Math.min(canvW-1,Math.ceil(ccx+rad)),y0=Math.max(0,Math.floor(ccy-rad)),y1=Math.min(canvH-1,Math.ceil(ccy+rad));if(x0>x1||y0>y1)continue;for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const ddx=x-ccx,ddy=y-ccy;const dist=Math.sqrt(ddx*ddx+ddy*ddy);if(dist>=rad||dist<.001)continue;const t=dist/rad;const outerBand=Math.max(0.01,1-ripplesFeather);const edgeT=t<(1-outerBand)?1:(Math.max(0,(1-t)/outerBand));const edgeSoft=edgeT*edgeT*(3-2*edgeT);const w=Math.pow(1-t,ripplesFalloff*3+0.1)*edgeSoft;if(w<=0)continue;const phase=t*ripplesCount*Math.PI*2;const wave=Math.sin(phase);const nx=ddx/dist,ny=ddy/dist;const tgtR=Math.max(0,Math.min(1,.5+nx*wave*ripplesIntensity));const tgtG=Math.max(0,Math.min(1,.5+ny*wave*ripplesIntensity));const i=y*canvW+x;sr[i]+=tgtR*w;sg[i]+=tgtG*w;sw[i]+=w;}}for(let i=0;i<sz;i++){if(sw[i]>0){const blend=Math.min(1,sw[i])*.8;fR[i]+=(sr[i]/sw[i]-fR[i])*blend;fG[i]+=(sg[i]/sw[i]-fG[i])*blend;}}}else{const x0=seamless?Math.floor(cx-rad):Math.max(0,Math.floor(cx-rad)),x1=seamless?Math.ceil(cx+rad):Math.min(canvW-1,Math.ceil(cx+rad)),y0=seamless?Math.floor(cy-rad):Math.max(0,Math.floor(cy-rad)),y1=seamless?Math.ceil(cy+rad):Math.min(canvH-1,Math.ceil(cy+rad));for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){let ddx,ddy;if(seamless){ddx=((x-cx)%canvW+canvW)%canvW;if(ddx>canvW/2)ddx-=canvW;ddy=((y-cy)%canvH+canvH)%canvH;if(ddy>canvH/2)ddy-=canvH;}else{ddx=x-cx;ddy=y-cy;}const dist=Math.sqrt(ddx*ddx+ddy*ddy);if(dist>=rad||dist<.001)continue;const t=dist/rad;const outerBand=Math.max(0.01,1-ripplesFeather);const edgeT=t<(1-outerBand)?1:(Math.max(0,(1-t)/outerBand));const edgeSoft=edgeT*edgeT*(3-2*edgeT);const w=Math.pow(1-t,ripplesFalloff*3+0.1)*edgeSoft;if(w<=0)continue;const phase=t*ripplesCount*Math.PI*2;const wave=Math.sin(phase);const nx=ddx/dist,ny=ddy/dist;const tgtR=Math.max(0,Math.min(1,.5+nx*wave*ripplesIntensity));const tgtG=Math.max(0,Math.min(1,.5+ny*wave*ripplesIntensity));let px=x,py=y;if(seamless){px=((x%canvW)+canvW)%canvW;py=((y%canvH)+canvH)%canvH;}if(px<0||px>=canvW||py<0||py>=canvH)continue;const i=py*canvW+px,blend=w*.8;fR[i]+=(tgtR-fR[i])*blend;fG[i]+=(tgtG-fG[i])*blend;}}}
+function paintRipplesDistortStamp(cx,cy,rad){const big=seamless&&(rad>=canvW/2||rad>=canvH/2);const x0=big?0:Math.floor(cx-rad),x1=big?canvW-1:Math.ceil(cx+rad),y0=big?0:Math.floor(cy-rad),y1=big?canvH-1:Math.ceil(cy+rad);const cR=new Float32Array(fR),cG=new Float32Array(fG);for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){let ddx,ddy;if(seamless){ddx=((x-cx)%canvW+canvW)%canvW;if(ddx>canvW/2)ddx-=canvW;ddy=((y-cy)%canvH+canvH)%canvH;if(ddy>canvH/2)ddy-=canvH;}else{ddx=x-cx;ddy=y-cy;}const dist=Math.sqrt(ddx*ddx+ddy*ddy);if(dist>=rad||dist<.001)continue;const t=dist/rad;const outerBand=Math.max(0.01,1-ripplesFeather);const edgeT=t<(1-outerBand)?1:(Math.max(0,(1-t)/outerBand));const edgeSoft=edgeT*edgeT*(3-2*edgeT);const w=Math.pow(1-t,ripplesFalloff*3+0.1)*edgeSoft;if(w<=0)continue;const phase=t*ripplesCount*Math.PI*2;const wave=Math.sin(phase);const squeeze=wave*ripplesIntensity*w*0.9;const sampleDist=dist*(1-squeeze);const theta=Math.atan2(ddy,ddx);const srcX=cx+sampleDist*Math.cos(theta);const srcY=cy+sampleDist*Math.sin(theta);const[srcR,srcG]=bilinearFlowSample(srcX,srcY,cR,cG);let px=x,py=y;if(seamless){px=((x%canvW)+canvW)%canvW;py=((y%canvH)+canvH)%canvH;}if(px<0||px>=canvW||py<0||py>=canvH)continue;const i=py*canvW+px,blend=w*.8;fR[i]+=(srcR-fR[i])*blend;fG[i]+=(srcG-fG[i])*blend;}}
+function paintBlurAt(fx,fy){const rad=brushSize*.5;const _fw=seamless&&rad*2>=canvW,_fh=seamless&&rad*2>=canvH;const x0=_fw?0:Math.floor(fx-rad),x1=_fw?canvW-1:Math.ceil(fx+rad),y0=_fh?0:Math.floor(fy-rad),y1=_fh?canvH-1:Math.ceil(fy+rad);for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){let dist;if(seamless){let ddx=((x-fx)%canvW+canvW)%canvW;if(ddx>canvW/2)ddx-=canvW;let ddy=((y-fy)%canvH+canvH)%canvH;if(ddy>canvH/2)ddy-=canvH;dist=Math.sqrt(ddx*ddx+ddy*ddy);}else{dist=Math.sqrt((x-fx)**2+(y-fy)**2);}const w=softFalloff(dist,rad)*.7;if(w<=0)continue;let px=x,py=y;if(seamless){px=((x%canvW)+canvW)%canvW;py=((y%canvH)+canvH)%canvH;}if(px<0||px>=canvW||py<0||py>=canvH)continue;let sR=0,sG=0,wt=0;for(let dy2=-1;dy2<=1;dy2++)for(let dx2=-1;dx2<=1;dx2++){let nx=px+dx2,ny=py+dy2;if(seamless){nx=((nx%canvW)+canvW)%canvW;ny=((ny%canvH)+canvH)%canvH;}if(nx<0||nx>=canvW||ny<0||ny>=canvH)continue;const ww=(dx2===0&&dy2===0)?4:((dx2===0||dy2===0)?2:1);sR+=fR[ny*canvW+nx]*ww;sG+=fG[ny*canvW+nx]*ww;wt+=ww;}if(wt>0){const i=py*canvW+px;fR[i]+=(sR/wt-fR[i])*w;fG[i]+=(sG/wt-fG[i])*w;}}}
+function paintBlurSeg(x0,y0,x1,y1){const dx=x1-x0,dy=y1-y0,dist=Math.sqrt(dx*dx+dy*dy),sp=Math.max(.5,brushSize*.1),steps=Math.max(1,Math.ceil(dist/sp));for(let i=0;i<=steps;i++)paintBlurAt(x0+dx*i/steps,y0+dy*i/steps);}
+function paintEraseAt(fx,fy){const rad=brushSize*.5;const eraseBlend=Math.min(0.8,brushIntensity*4);const _fw=seamless&&rad*2>=canvW,_fh=seamless&&rad*2>=canvH;const x0=_fw?0:Math.floor(fx-rad),x1=_fw?canvW-1:Math.ceil(fx+rad),y0=_fh?0:Math.floor(fy-rad),y1=_fh?canvH-1:Math.ceil(fy+rad);for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){let dist;if(seamless){let ddx=((x-fx)%canvW+canvW)%canvW;if(ddx>canvW/2)ddx-=canvW;let ddy=((y-fy)%canvH+canvH)%canvH;if(ddy>canvH/2)ddy-=canvH;dist=Math.sqrt(ddx*ddx+ddy*ddy);}else{dist=Math.sqrt((x-fx)**2+(y-fy)**2);}const w=softFalloff(dist,rad)*eraseBlend;if(w<=0)continue;let px=x,py=y;if(seamless){px=((x%canvW)+canvW)%canvW;py=((y%canvH)+canvH)%canvH;}if(px<0||px>=canvW||py<0||py>=canvH)continue;const i=py*canvW+px;fR[i]+=(.5-fR[i])*w;fG[i]+=(.5-fG[i])*w;}}
+function paintEraseSeg(x0,y0,x1,y1){const dx=x1-x0,dy=y1-y0,dist=Math.sqrt(dx*dx+dy*dy),sp=Math.max(.5,brushSize*.1),steps=Math.max(1,Math.ceil(dist/sp));for(let i=0;i<=steps;i++)paintEraseAt(x0+dx*i/steps,y0+dy*i/steps);}
+function paintSmudgeAt(fx,fy,movDx,movDy){const rad=brushSize*.5;const moveMag=Math.sqrt(movDx*movDx+movDy*movDy);const _fw=seamless&&rad*2>=canvW,_fh=seamless&&rad*2>=canvH;const x0=_fw?0:Math.floor(fx-rad),x1=_fw?canvW-1:Math.ceil(fx+rad),y0=_fh?0:Math.floor(fy-rad),y1=_fh?canvH-1:Math.ceil(fy+rad);if(moveMag<0.01){for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){let dist;if(seamless){let ddx=((x-fx)%canvW+canvW)%canvW;if(ddx>canvW/2)ddx-=canvW;let ddy=((y-fy)%canvH+canvH)%canvH;if(ddy>canvH/2)ddy-=canvH;dist=Math.sqrt(ddx*ddx+ddy*ddy);}else{dist=Math.sqrt((x-fx)**2+(y-fy)**2);}const w=softFalloff(dist,rad);if(w<=0)continue;let px=x,py=y;if(seamless){px=((x%canvW)+canvW)%canvW;py=((y%canvH)+canvH)%canvH;}if(px<0||px>=canvW||py<0||py>=canvH)continue;const i=py*canvW+px;const r=Math.min(dist/rad,.999),fo=Math.pow(1-r,1+smudgeFalloff*4);fR[i]+=(.5-fR[i])*w*fo*smudgeIntensity*.3;fG[i]+=(.5-fG[i])*w*fo*smudgeIntensity*.3;}return;}const nmx=movDx/moveMag,nmy=movDy/moveMag;const offsetDist=Math.min(moveMag,rad)*smudgeLength*2;for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){let dist;if(seamless){let ddx=((x-fx)%canvW+canvW)%canvW;if(ddx>canvW/2)ddx-=canvW;let ddy=((y-fy)%canvH+canvH)%canvH;if(ddy>canvH/2)ddy-=canvH;dist=Math.sqrt(ddx*ddx+ddy*ddy);}else{dist=Math.sqrt((x-fx)**2+(y-fy)**2);}const w=softFalloff(dist,rad);if(w<=0)continue;let px=x,py=y;if(seamless){px=((x%canvW)+canvW)%canvW;py=((y%canvH)+canvH)%canvH;}if(px<0||px>=canvW||py<0||py>=canvH)continue;const r=Math.min(dist/rad,.999),fo=Math.pow(1-r,1+smudgeFalloff*4);const srcX=Math.round(px-nmx*offsetDist*w);const srcY=Math.round(py-nmy*offsetDist*w);let sx=srcX,sy=srcY;if(seamless){sx=((sx%canvW)+canvW)%canvW;sy=((sy%canvH)+canvH)%canvH;}if(sx<0||sx>=canvW||sy<0||sy>=canvH)continue;const dstI=py*canvW+px,srcI=sy*canvW+sx;const blend=w*fo*smudgeIntensity*.6;fR[dstI]+=(fR[srcI]-fR[dstI])*blend;fG[dstI]+=(fG[srcI]-fG[dstI])*blend;}}
+function paintSmudgeSeg(x0,y0,x1,y1){const dx=x1-x0,dy=y1-y0,dist=Math.sqrt(dx*dx+dy*dy),sp=Math.max(.5,brushSize*.05),steps=Math.max(1,Math.ceil(dist/sp)),sdx=dx/steps,sdy=dy/steps;for(let i=0;i<=steps;i++){const t=i/steps;paintSmudgeAt(x0+dx*t,y0+dy*t,sdx,sdy);}}
+const zpE=document.getElementById('zoomPct');
+function apT(){mainC.style.transform='translate('+panX+'px,'+panY+'px) scale('+zoom+')';zpE.textContent=Math.round(zoom*100)+'%';if(viewMode!=='preview')drawArrows();}
+function setZ(z,ax,ay){const o=zoom;zoom=Math.max(.04,Math.min(16,z));if(ax!==undefined){panX=ax-(ax-panX)*(zoom/o);panY=ay-(ay-panY)*(zoom/o);}apT();}
+function zFit(){const r=area.getBoundingClientRect();zoom=Math.min((r.width-60)/Math.max(canvW,1),(r.height-60)/Math.max(canvH,1));panX=(r.width-canvW*zoom)/2;panY=(r.height-canvH*zoom)/2;apT();}
+area.addEventListener('wheel',e=>{e.preventDefault();const r=area.getBoundingClientRect();const ox=e.clientX-r.left,oy=e.clientY-r.top;setZ(zoom*(e.deltaY<0?1.12:1/1.12),ox,oy);const [fx,fy]=areaToCanvas(ox,oy);drawBrushCursor(ox,oy,fx,fy);},{passive:false});
+document.getElementById('zoomIn').addEventListener('click',()=>{const r=area.getBoundingClientRect();setZ(zoom*1.25,r.width/2,r.height/2);});
+document.getElementById('zoomOut').addEventListener('click',()=>{const r=area.getBoundingClientRect();setZ(zoom/1.25,r.width/2,r.height/2);});
+document.getElementById('zoomFit').addEventListener('click',zFit);
+function toggleCenterGrid(){
+    showCenterGrid=!showCenterGrid;
+    const chk=document.getElementById('centerGridCheck');
+    if(chk)chk.checked=showCenterGrid;
+    curX.clearRect(0,0,curC.width,curC.height);
+    if(viewMode!=='preview')drawArrows();
+    if(showCenterGrid)drawCenterGrid();
+}
+zpE.addEventListener('click',()=>{zoom=1;const r=area.getBoundingClientRect();panX=(r.width-canvW)/2;panY=(r.height-canvH)/2;apT();});
+document.addEventListener('keydown',e=>{if(e.ctrlKey&&e.altKey&&e.shiftKey&&e.key==='E'){e.preventDefault();exportFile();return;}if(e.key==='f'&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!e.target.closest('input,[contenteditable],select,textarea'))zFit();if(e.ctrlKey&&e.key==='z'&&!e.target.closest('[contenteditable],input[type="text"]')){e.preventDefault();undo();}if(e.ctrlKey&&(e.key==='y'||(e.shiftKey&&e.key==='Z'))&&!e.target.closest('[contenteditable],input[type="text"]')){e.preventDefault();redo();}if(!e.ctrlKey&&!e.altKey&&!e.metaKey&&!e.target.closest('input,[contenteditable],select,textarea')){if(e.key.toLowerCase()==='g'){toggleCenterGrid();e.preventDefault();return;}if(e.key.toLowerCase()==='r'){resetCanvas();e.preventDefault();return;}if(e.key.toLowerCase()==='m'){toggleSubMode();e.preventDefault();return;}const tool=TOOL_BY_KEY[e.key.toLowerCase()];if(tool)selectTool(tool);}});
+document.addEventListener('keydown',e=>{if(e.key==='Shift'&&!shiftDown&&!e.ctrlKey&&!e.altKey&&!e.metaKey){shiftDown=true;shiftLastMX=null;const ht=document.getElementById('brushHint');const isTweak=BRUSH_TOOLS.has(currentTool)||currentTool==='pinch'||currentTool==='swirl'||currentTool==='ripples';if(isTweak){shiftLockFX=mouseFX;shiftLockFY=mouseFY;shiftLockCX=mouseFX*zoom+panX;shiftLockCY=mouseFY*zoom+panY;area.style.cursor='ew-resize';ht.style.color='var(--accent)';if(BRUSH_TOOLS.has(currentTool))ht.textContent='Size: '+Math.round(brushSize)+'px';else if(currentTool==='pinch')ht.textContent='Turns: '+pinchRotation.toFixed(1);else if(currentTool==='swirl')ht.textContent='Turns: '+swirlTurns.toFixed(1);else if(currentTool==='ripples')ht.textContent='Count: '+Math.round(ripplesCount);drawBrushCursor(shiftLockCX,shiftLockCY,shiftLockFX,shiftLockFY);}}});
+document.addEventListener('keyup',e=>{if(e.key==='Shift'){shiftDown=false;shiftLastMX=null;shiftLockFX=null;shiftLockFY=null;shiftLockCX=null;shiftLockCY=null;const isTweak=BRUSH_TOOLS.has(currentTool)||currentTool==='pinch'||currentTool==='swirl'||currentTool==='ripples';if(isTweak){const ht=document.getElementById('brushHint');ht.textContent=HINTS[currentTool]||'';ht.style.color='';area.style.cursor='crosshair';drawBrushCursor(mouseFX*zoom+panX,mouseFY*zoom+panY,mouseFX,mouseFY);}}});
+window.addEventListener('blur',()=>{if(shiftDown){shiftDown=false;shiftLastMX=null;shiftLockFX=null;shiftLockFY=null;shiftLockCX=null;shiftLockCY=null;const isTweak=BRUSH_TOOLS.has(currentTool)||currentTool==='pinch'||currentTool==='swirl'||currentTool==='ripples';if(isTweak){const ht=document.getElementById('brushHint');ht.textContent=HINTS[currentTool]||'';ht.style.color='';area.style.cursor='crosshair';drawBrushCursor(mouseFX*zoom+panX,mouseFY*zoom+panY,mouseFX,mouseFY);}}});
+document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(toolDrag&&toolDrag.phase===2){fR.set(toolDrag.snapR);fG.set(toolDrag.snapG);toolDrag=null;hideSwirlRing();redraw();const bh=document.getElementById('brushHint');bh.textContent=HINTS[currentTool]||'';bh.classList.remove('phase2');return;}const el=e.target;if(el.tagName==='INPUT'&&el.type==='text'){if(el.dataset.orig!==undefined)el.value=el.dataset.orig;el.blur();}});
+document.addEventListener('focusin',e=>{const el=e.target;if(el.tagName==='INPUT'&&el.type==='text')el.dataset.orig=el.value;});
+function areaToCanvas(cx,cy){return[(cx-panX)/zoom,(cy-panY)/zoom];}
+area.addEventListener('dragstart',e=>e.preventDefault());
+area.addEventListener('contextmenu',e=>e.preventDefault());
+area.addEventListener('pointerdown',e=>{
+    if(toolDrag&&toolDrag.phase===2&&e.button===0){toolDrag=null;hideSwirlRing();saveHist();const bh=document.getElementById('brushHint');bh.textContent=HINTS[currentTool]||'';bh.classList.remove('phase2');return;}
+    if(toolDrag&&toolDrag.phase===2&&e.button===2){fR.set(toolDrag.snapR);fG.set(toolDrag.snapG);toolDrag=null;hideSwirlRing();redraw();const bh=document.getElementById('brushHint');bh.textContent=HINTS[currentTool]||'';bh.classList.remove('phase2');return;}
+    if(e.button===1||(e.button===0&&e.altKey)){isPan=true;psx=e.clientX;psy=e.clientY;ppx=panX;ppy=panY;area.style.cursor='grabbing';area.setPointerCapture(e.pointerId);return;}
+    if(e.button!==0)return;if(!IMPLEMENTED.has(currentTool))return;
+    const r=area.getBoundingClientRect(),[fx,fy]=areaToCanvas(e.clientX-r.left,e.clientY-r.top);
+    if(DRAG_TOOLS.has(currentTool)){let ox=fx,oy=fy;if(showCenterGrid&&isNearCenter(fx,fy)){ox=canvW*.5;oy=canvH*.5;}toolDrag={tool:currentTool,ox,oy,fx:ox,fy:oy,rad:0,dragAngle:0,phase:1};area.setPointerCapture(e.pointerId);curX.clearRect(0,0,curC.width,curC.height);if(viewMode!=='preview')drawArrows();if(showCenterGrid)drawCenterGrid();updateSwirlRing(ox*zoom+panX,oy*zoom+panY,0);
+        // redraw the brush cursor overlay immediately so the segmented reference
+        // ring remains visible after click (was being cleared above).
+        drawBrushCursor(ox*zoom+panX, oy*zoom+panY, ox, oy);
+        return;}
+    if(shiftDown&&(BRUSH_TOOLS.has(currentTool)||currentTool==='pinch'||currentTool==='swirl'||currentTool==='ripples')){area.setPointerCapture(e.pointerId);return;}
+    isDrawing=true;strokeStartX=fx;strokeStartY=fy;lastDX=fx;lastDY=fy;
+    if(currentTool==='brush'){if(dirFromStroke)dirAngle=0;paintBrushAt(fx,fy,dirAngle);}
+    else if(currentTool==='smooth')paintBlurAt(fx,fy);
+    else if(currentTool==='erase')paintEraseAt(fx,fy);
+    else if(currentTool==='smudge')paintSmudgeAt(fx,fy,0,0);
+    else if(currentTool==='noise'){if(subMode==='distort')paintNoiseDistortAt(fx,fy);else paintNoiseAt(fx,fy);}
+    redraw();drawBrushCursor(e.clientX-r.left,e.clientY-r.top,fx,fy);area.setPointerCapture(e.pointerId);
+});
+area.addEventListener('pointermove',e=>{
+    const r=area.getBoundingClientRect(),cx=e.clientX-r.left,cy=e.clientY-r.top,[fx,fy]=areaToCanvas(cx,cy);
+    mouseFX=fx;mouseFY=fy;
+    if(isPan){panX=ppx+(e.clientX-psx);panY=ppy+(e.clientY-psy);apT();drawBrushCursor(cx,cy,fx,fy);return;}
+    if(toolDrag){
+        if(toolDrag.phase===2){const dx=fx-toolDrag.ox,dy=fy-toolDrag.oy,dist=Math.sqrt(dx*dx+dy*dy);if(dist>3){const rawAngle=Math.atan2(dy,dx);if(toolDrag.lastAngle===undefined)toolDrag.lastAngle=rawAngle;let delta=rawAngle-toolDrag.lastAngle;if(delta>Math.PI)delta-=Math.PI*2;else if(delta<=-Math.PI)delta+=Math.PI*2;toolDrag.dragAngle+=delta;toolDrag.lastAngle=rawAngle;}fR.set(toolDrag.snapR);fG.set(toolDrag.snapG);if(subMode==='distort')paintSwirlDistortAt(toolDrag.ox,toolDrag.oy,toolDrag.rad,toolDrag.cw,toolDrag.dragAngle);else paintSwirlAt(toolDrag.ox,toolDrag.oy,toolDrag.rad,toolDrag.cw,toolDrag.dragAngle);redraw();curX.clearRect(0,0,curC.width,curC.height);if(viewMode!=='preview')drawArrows();if(showCenterGrid)drawCenterGrid();const scx=Math.round(toolDrag.ox*zoom+panX),scy=Math.round(toolDrag.oy*zoom+panY);
+            const refSr = swirlRadius * zoom;
+            curX.save();
+            curX.strokeStyle='rgba(232,160,32,.6)';
+            curX.lineWidth=1;
+            curX.setLineDash([4,3]);
+            curX.beginPath();
+            curX.arc(scx, scy, refSr, 0, Math.PI*2);
+            curX.stroke();
+            curX.setLineDash([]);
+            curX.restore();
+        curX.save();curX.strokeStyle='rgba(232,160,32,0.5)';curX.lineWidth=1;curX.beginPath();curX.moveTo(scx-6,scy);curX.lineTo(scx+6,scy);curX.stroke();curX.beginPath();curX.moveTo(scx,scy-6);curX.lineTo(scx,scy+6);curX.stroke();curX.strokeStyle='rgba(232,160,32,0.8)';curX.lineWidth=1.5;curX.setLineDash([6,4]);curX.beginPath();curX.moveTo(scx,scy);curX.lineTo(cx,cy);curX.stroke();curX.setLineDash([]);const angleDeg=Math.round(((-toolDrag.dragAngle*180/Math.PI)%360+360)%360);curX.fillStyle='rgba(232,160,32,0.9)';curX.font='bold 10px "DM Mono", monospace';curX.textAlign='left';curX.textBaseline='bottom';curX.fillText(angleDeg+'\u00B0',cx+12,cy-8);curX.restore();updateSwirlRing(scx,scy,toolDrag.rad*zoom);return;}
+        const dx=fx-toolDrag.ox,dy=fy-toolDrag.oy;toolDrag.rad=Math.sqrt(dx*dx+dy*dy);toolDrag.fx=fx;toolDrag.fy=fy;if(toolDrag.rad>3)toolDrag.dragAngle=Math.atan2(dy,dx);curX.clearRect(0,0,curC.width,curC.height);if(viewMode!=='preview')drawArrows();if(showCenterGrid)drawCenterGrid();updateSwirlRing(toolDrag.ox*zoom+panX,toolDrag.oy*zoom+panY,toolDrag.rad*zoom);
+        // also draw the segmented reference ring on the cursor canvas so it stays visible
+        // while sizing (phase 1). Use the previous tool radius (swirlRadius).
+        const refSr = swirlRadius * zoom;
+        const scx = Math.round(toolDrag.ox*zoom+panX), scy = Math.round(toolDrag.oy*zoom+panY);
+        curX.save();
+        curX.strokeStyle='rgba(232,160,32,.6)';
+        curX.lineWidth=1;
+        curX.setLineDash([4,3]);
+        curX.beginPath();
+        curX.arc(scx, scy, refSr, 0, Math.PI*2);
+        curX.stroke();
+        curX.setLineDash([]);
+        curX.restore();
+        return;
+    }
+    if(shiftDown&&!isDrawing){const isTweak=BRUSH_TOOLS.has(currentTool)||currentTool==='pinch'||currentTool==='swirl'||currentTool==='ripples';if(isTweak){if(shiftLockFX===null){shiftLockFX=fx;shiftLockFY=fy;shiftLockCX=cx;shiftLockCY=cy;}if(shiftLastMX!==null){const sdx=e.clientX-shiftLastMX;if(sdx!==0){if(BRUSH_TOOLS.has(currentTool)){brushSize=Math.max(1,Math.min(1024,Math.round(brushSize+sdx)));document.getElementById('brushSize').value=brushSize;document.getElementById('brushSizeV').textContent=brushSize;document.getElementById('brushHint').textContent='Size: '+Math.round(brushSize)+'px';}else if(currentTool==='pinch'){pinchRotation=Math.max(-10,Math.min(10,pinchRotation+sdx*0.05));document.getElementById('brushHint').textContent='Turns: '+pinchRotation.toFixed(1);document.getElementById('pinchRotation').value=Math.round(pinchRotation*10);document.getElementById('pinchRotationV').textContent=pinchRotation.toFixed(1);}else if(currentTool==='swirl'){swirlTurns=Math.max(0.5,Math.min(10,swirlTurns+sdx*0.05));document.getElementById('brushHint').textContent='Turns: '+swirlTurns.toFixed(1);document.getElementById('swirlTurns').value=Math.round(swirlTurns*10);document.getElementById('swirlTurnsV').textContent=swirlTurns.toFixed(1);}else if(currentTool==='ripples'){ripplesCount=Math.max(1,Math.min(20,ripplesCount+sdx*0.05));document.getElementById('brushHint').textContent='Count: '+Math.round(ripplesCount);document.getElementById('ripplesCount').value=Math.round(ripplesCount);document.getElementById('ripplesCountV').textContent=Math.round(ripplesCount);}}}shiftLastMX=e.clientX;drawBrushCursor(shiftLockCX,shiftLockCY,shiftLockFX,shiftLockFY);return;}}
+    let ix=Math.floor(fx),iy=Math.floor(fy);if(seamless){ix=((ix%canvW)+canvW)%canvW;iy=((iy%canvH)+canvH)%canvH;}
+    if(ix>=0&&ix<canvW&&iy>=0&&iy<canvH){const i=iy*canvW+ix;document.getElementById('piR').textContent=c255(fR[i]*255);document.getElementById('piG').textContent=c255(fG[i]*255);document.getElementById('piPos').textContent=ix+', '+iy;document.getElementById('pixelInfo').style.display='flex';}
+    drawBrushCursor(cx,cy,fx,fy);
+    if(!isDrawing)return;
+    if(dirFromStroke&&currentTool==='brush'){const sdx=fx-strokeStartX,sdy=fy-strokeStartY,d=Math.sqrt(sdx*sdx+sdy*sdy);if(d>3){dirAngle=Math.atan2(sdy,sdx)*180/Math.PI;updateDirWheel();}}
+    if(currentTool==='brush')paintBrushSeg(lastDX,lastDY,fx,fy,dirAngle);
+    else if(currentTool==='smooth')paintBlurSeg(lastDX,lastDY,fx,fy);
+    else if(currentTool==='erase')paintEraseSeg(lastDX,lastDY,fx,fy);
+    else if(currentTool==='smudge')paintSmudgeSeg(lastDX,lastDY,fx,fy);
+    else if(currentTool==='noise'){if(subMode==='distort')paintNoiseDistortSeg(lastDX,lastDY,fx,fy);else paintNoiseSeg(lastDX,lastDY,fx,fy);}
+    lastDX=fx;lastDY=fy;redraw();drawBrushCursor(cx,cy,fx,fy);
+});
+area.addEventListener('pointerup',()=>{
+    if(isPan){isPan=false;area.style.cursor='crosshair';}
+    if(toolDrag){const rad=Math.max(4,toolDrag.rad);if(rad>=4){swirlRadius=Math.round(rad);if(toolDrag.tool==='swirl'){toolDrag.snapR=new Float32Array(fR);toolDrag.snapG=new Float32Array(fG);toolDrag.cw=(toolDrag.fx-toolDrag.ox)>=0;toolDrag.phase=2;toolDrag.lastAngle=toolDrag.dragAngle;if(subMode==='distort')paintSwirlDistortAt(toolDrag.ox,toolDrag.oy,rad,toolDrag.cw,toolDrag.dragAngle);else paintSwirlAt(toolDrag.ox,toolDrag.oy,rad,toolDrag.cw,toolDrag.dragAngle);redraw();curX.clearRect(0,0,curC.width,curC.height);if(viewMode!=='preview')drawArrows();if(showCenterGrid)drawCenterGrid();hideSwirlRing();updateSwirlRing(toolDrag.ox*zoom+panX,toolDrag.oy*zoom+panY,rad*zoom);const bh=document.getElementById('brushHint');bh.textContent='Rotate: move mouse \u2022 Click=OK, Esc=Cancel';bh.classList.add('phase2');return;}else if(toolDrag.tool==='sphere'){if(subMode==='distort')paintSphereDistortStamp(toolDrag.ox,toolDrag.oy,rad);else paintSphereStamp(toolDrag.ox,toolDrag.oy,rad);}else if(toolDrag.tool==='pinch'){toolDrag.cw=(toolDrag.fx-toolDrag.ox)>=0;if(subMode==='distort')paintPinchDistortStamp(toolDrag.ox,toolDrag.oy,rad,toolDrag.cw);else paintPinchStamp(toolDrag.ox,toolDrag.oy,rad,toolDrag.cw);}else if(toolDrag.tool==='ripples'){if(subMode==='distort')paintRipplesDistortStamp(toolDrag.ox,toolDrag.oy,rad);else paintRipplesStamp(toolDrag.ox,toolDrag.oy,rad);}redraw();}toolDrag=null;hideSwirlRing();drawBrushCursor(mouseFX*zoom+panX,mouseFY*zoom+panY,mouseFX,mouseFY);saveHist();return;}
+    if(isDrawing){isDrawing=false;lastDX=null;lastDY=null;saveHist();drawBrushCursor(mouseFX*zoom+panX,mouseFY*zoom+panY,mouseFX,mouseFY);} 
+});
+area.addEventListener('pointerleave',()=>{document.getElementById('pixelInfo').style.display='none';curX.clearRect(0,0,curC.width,curC.height);if(viewMode!=='preview')drawArrows();if(showCenterGrid)drawCenterGrid();});
+function updateSwirlRing(sx,sy,sr){const ring=document.getElementById('swirlRing');const ix=Math.round(sx-sr), iy=Math.round(sy-sr), iw=Math.round(sr*2), ih=Math.round(sr*2);ring.style.display='block';ring.style.left=ix+'px';ring.style.top=iy+'px';ring.style.width=iw+'px';ring.style.height=ih+'px';ring.style.boxShadow='0 0 0 1px rgba(232,160,32,.5), inset 0 0 0 1px rgba(232,160,32,.15)';}
+function hideSwirlRing(){document.getElementById('swirlRing').style.display='none';}
+function drawBrushCursor(cx,cy,fx,fy){const rcx=Math.round(cx), rcy=Math.round(cy);curX.clearRect(0,0,curC.width,curC.height);if(viewMode!=='preview')drawArrows();if(showCenterGrid)drawCenterGrid();if(!IMPLEMENTED.has(currentTool))return;if(DRAG_TOOLS.has(currentTool)){
+        // Draw persistent reference ring (last-used size) even while dragging
+        const refSr = swirlRadius * zoom;
+        curX.strokeStyle = 'rgba(232,160,32,.6)';
+        curX.lineWidth = 1;
+        curX.setLineDash([4,3]);
+        curX.beginPath();
+        curX.arc(rcx, rcy, refSr, 0, Math.PI*2);
+        curX.stroke();
+        curX.setLineDash([]);
+
+        // Keep the extra preview (turns / ripples) only when not actively dragging
+        if(!toolDrag && shiftDown){
+            const ovR = refSr;curX.save();curX.translate(rcx,rcy);
+            if(currentTool==='pinch'||currentTool==='swirl'){
+                curX.strokeStyle='rgba(232,160,32,.9)';curX.lineWidth=1.5;curX.beginPath();const turns=currentTool==='swirl'?swirlTurns:pinchRotation;for(let t=0;t<=1;t+=0.01){const r=t*ovR;const a=t*turns*Math.PI*2;if(t===0)curX.moveTo(r*Math.cos(a),r*Math.sin(a));else curX.lineTo(r*Math.cos(a),r*Math.sin(a));}curX.stroke();
+            }else if(currentTool==='ripples'){
+                curX.strokeStyle='rgba(232,160,32,.9)';curX.lineWidth=1.5;const count=Math.round(ripplesCount);for(let i=1;i<=count;i++){const r=(i/count)*ovR;curX.beginPath();curX.arc(0,0,r,0,Math.PI*2);curX.stroke();}
+            }
+            curX.restore();
+        }
+
+        if(fx!==undefined)drawCenterLabel();
+        return;}
+const sr=brushSize*.5*zoom;curX.strokeStyle='rgba(232,160,32,.7)';curX.lineWidth=1;curX.beginPath();curX.arc(rcx,rcy,Math.max(1,sr),0,Math.PI*2);curX.stroke();if(currentTool==='brush'){const ang=dirAngle*Math.PI/180,al=Math.min(sr*.7,40);curX.strokeStyle='rgba(232,160,32,.9)';curX.lineWidth=1.5;curX.beginPath();curX.moveTo(rcx,rcy);curX.lineTo(rcx+Math.cos(ang)*al,rcy+Math.sin(ang)*al);curX.stroke();}}
+function syncCursorCanvas(){const r=area.getBoundingClientRect();curC.width=r.width;curC.height=r.height;curC.style.width=r.width+'px';curC.style.height=r.height+'px';}
+const wheelC=document.getElementById('dirWheel'),wheelX=wheelC.getContext('2d'),arrowEl=document.getElementById('dirArrow');
+function drawDirWheel(){const w=wheelC.width,h=wheelC.height,cx=w/2,cy=h/2,r=cx-4;wheelX.clearRect(0,0,w,h);for(let a=0;a<360;a++){wheelX.strokeStyle=`hsl(${a},60%,52%)`;wheelX.lineWidth=r*.3;wheelX.beginPath();wheelX.arc(cx,cy,r*.84,(a-.5)*Math.PI/180,(a+.5)*Math.PI/180);wheelX.stroke();}wheelX.fillStyle='#1a1a1a';wheelX.beginPath();wheelX.arc(cx,cy,r*.66,0,Math.PI*2);wheelX.fill();}
+function updateDirWheel(){arrowEl.style.transform=`translateX(-50%) translateY(-100%) rotate(${dirAngle}deg)`;const dx=Math.cos(dirAngle*Math.PI/180),dy=Math.sin(dirAngle*Math.PI/180);document.getElementById('dirAngleDisplay').textContent=Math.round(((dirAngle%360)+360)%360)+'\u00B0';document.getElementById('dirUV').textContent=`UV \u2192 (${(.5+dx*brushIntensity).toFixed(3)}, ${(.5+dy*brushIntensity).toFixed(3)})`;}
+let wheelDragging=false;
+wheelC.addEventListener('pointerdown',e=>{wheelDragging=true;wheelC.setPointerCapture(e.pointerId);updWheelAngle(e);});
+wheelC.addEventListener('pointermove',e=>{if(wheelDragging)updWheelAngle(e);});
+wheelC.addEventListener('pointerup',()=>wheelDragging=false);
+function updWheelAngle(e){const r=wheelC.getBoundingClientRect();dirAngle=Math.atan2(e.clientY-r.top-wheelC.height/2,e.clientX-r.left-wheelC.width/2)*180/Math.PI;updateDirWheel();}
+function evalMath(str){const s=String(str).trim();if(!s)return NaN;const clean=s.replace(/%/g,'');if(!/^[\d+\-*/().\s]+$/.test(clean))return NaN;try{const r=new Function('return ('+clean+')')();return typeof r==='number'&&isFinite(r)?r:NaN;}catch(e){return NaN;}}
+function bindParam({rangeId,scale,defVal,getState,setState,fmt,parseVal,onChange}){const R=document.getElementById(rangeId);if(!R)return;const pg=R.closest('.pg'),V=pg.querySelector('.pg-val');let origText='',origReal=0,cancelFlag=false;function fromSlider(){const real=+R.value/scale;setState(real);V.textContent=fmt(real);if(onChange)onChange();}function fromVal(){if(cancelFlag){cancelFlag=false;return;}let raw=V.textContent.trim(),n=evalMath(raw);if(isNaN(n)){V.textContent=fmt(getState());return;}n=parseVal(n);n=Math.max(+R.min/scale,Math.min(+R.max/scale,n));R.value=Math.round(n*scale);setState(n);V.textContent=fmt(n);if(onChange)onChange();}R.addEventListener('input',fromSlider);V.addEventListener('focus',()=>{origText=V.textContent;origReal=getState();cancelFlag=false;requestAnimationFrame(()=>{const range=document.createRange();range.selectNodeContents(V);const sel=window.getSelection();sel.removeAllRanges();sel.addRange(range);});});V.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();V.blur();}if(e.key==='Escape'){e.preventDefault();cancelFlag=true;V.textContent=origText;R.value=Math.round(origReal*scale);setState(origReal);if(onChange)onChange();V.blur();}});V.addEventListener('blur',fromVal);V.addEventListener('paste',e=>{e.preventDefault();const t=(e.clipboardData||window.clipboardData).getData('text/plain').replace(/[\n\r]/g,'');document.execCommand('insertText',false,t);});const stepSize=Math.max(1,Math.floor((+R.max-+R.min)/40));const dec=pg.querySelector('[data-dec]'),inc=pg.querySelector('[data-inc]'),rst=pg.querySelector('[data-rst]');if(dec)dec.addEventListener('click',()=>{R.value=Math.max(+R.min,+R.value-stepSize);fromSlider();});if(inc)inc.addEventListener('click',()=>{R.value=Math.min(+R.max,+R.value+stepSize);fromSlider();});if(rst)rst.addEventListener('click',()=>{R.value=defVal;fromSlider();});R.value=Math.round(getState()*scale);V.textContent=fmt(getState());}
+bindParam({rangeId:'brushSize',scale:1,defVal:DEF.brushSize,getState:()=>brushSize,setState:v=>{brushSize=v;},fmt:v=>Math.round(v),parseVal:v=>v,onChange:()=>updateDirWheel()});
+bindParam({rangeId:'brushIntensity',scale:100,defVal:DEF.brushIntensity,getState:()=>brushIntensity,setState:v=>{brushIntensity=v;},fmt:v=>v.toFixed(2),parseVal:v=>v>1?v/100:v,onChange:()=>updateDirWheel()});
+bindParam({rangeId:'brushHardness',scale:100,defVal:DEF.brushHardness,getState:()=>brushHardness,setState:v=>{brushHardness=v;},fmt:v=>Math.round(v*100),parseVal:v=>v<=1?v:v/100});
+bindParam({rangeId:'noiseIntensity',scale:100,defVal:DEF.noiseIntensity,getState:()=>noiseIntensity,setState:v=>{noiseIntensity=v;},fmt:v=>Math.round(v*100),parseVal:v=>v<=1?v:v/100});
+bindParam({rangeId:'noiseScale',scale:1,defVal:DEF.noiseScale,getState:()=>noiseScale,setState:v=>{noiseScale=v;},fmt:v=>Math.round(v),parseVal:v=>v,onChange:_invalidateNoiseCache});
+bindParam({rangeId:'noiseTurbulence',scale:100,defVal:DEF.noiseTurbulence,getState:()=>noiseTurbulence,setState:v=>{noiseTurbulence=v;},fmt:v=>Math.round(v*100),parseVal:v=>v<=1?v:v/100,onChange:_invalidateNoiseCache});
+bindParam({rangeId:'swirlTurns',scale:10,defVal:DEF.swirlTurns*10,getState:()=>swirlTurns,setState:v=>{swirlTurns=v;},fmt:v=>v.toFixed(1),parseVal:v=>Math.max(0.5,Math.min(10,v/10))});
+bindParam({rangeId:'swirlIntensity',scale:100,defVal:DEF.swirlIntensity,getState:()=>swirlIntensity,setState:v=>{swirlIntensity=v;},fmt:v=>Math.round(v*100),parseVal:v=>v<=1?v:v/100});
+bindParam({rangeId:'swirlFalloff',scale:100,defVal:DEF.swirlFalloff,getState:()=>swirlFalloff,setState:v=>{swirlFalloff=v;},fmt:v=>Math.round(v*100),parseVal:v=>v<=1?v:v/100});
+bindParam({rangeId:'swirlFeather',scale:100,defVal:DEF.swirlFeather,getState:()=>swirlFeather,setState:v=>{swirlFeather=v;},fmt:v=>Math.round(v*100),parseVal:v=>v<=1?v:v/100});
+bindParam({rangeId:'sphereIntensity',scale:100,defVal:DEF.sphereIntensity,getState:()=>sphereIntensity,setState:v=>{sphereIntensity=v;},fmt:v=>Math.round(v*100),parseVal:v=>v<=1?v:v/100});
+bindParam({rangeId:'sphereFalloff',scale:100,defVal:DEF.sphereFalloff,getState:()=>sphereFalloff,setState:v=>{sphereFalloff=v;},fmt:v=>Math.round(v*100),parseVal:v=>v<=1?v:v/100});
+bindParam({rangeId:'sphereFeather',scale:100,defVal:DEF.sphereFeather,getState:()=>sphereFeather,setState:v=>{sphereFeather=v;},fmt:v=>Math.round(v*100),parseVal:v=>v<=1?v:v/100});
+bindParam({rangeId:'pinchRotation',scale:10,defVal:DEF.pinchRotation*10,getState:()=>pinchRotation,setState:v=>{pinchRotation=v;},fmt:v=>v.toFixed(1),parseVal:v=>Math.max(-10,Math.min(10,v))});
+bindParam({rangeId:'pinchIntensity',scale:100,defVal:DEF.pinchIntensity,getState:()=>pinchIntensity,setState:v=>{pinchIntensity=v;},fmt:v=>Math.round(v*100),parseVal:v=>v<=1?v:v/100});
+bindParam({rangeId:'pinchFalloff',scale:100,defVal:DEF.pinchFalloff,getState:()=>pinchFalloff,setState:v=>{pinchFalloff=v;},fmt:v=>Math.round(v*100),parseVal:v=>v<=1?v:v/100});
+bindParam({rangeId:'pinchFeather',scale:100,defVal:DEF.pinchFeather,getState:()=>pinchFeather,setState:v=>{pinchFeather=v;},fmt:v=>Math.round(v*100),parseVal:v=>v<=1?v:v/100});
+bindParam({rangeId:'smudgeIntensity',scale:100,defVal:DEF.smudgeIntensity,getState:()=>smudgeIntensity,setState:v=>{smudgeIntensity=v;},fmt:v=>Math.round(v*100),parseVal:v=>v<=1?v:v/100});
+bindParam({rangeId:'smudgeLength',scale:100,defVal:DEF.smudgeLength,getState:()=>smudgeLength,setState:v=>{smudgeLength=v;},fmt:v=>Math.round(v*100),parseVal:v=>v<=1?v:v/100});
+bindParam({rangeId:'smudgeFalloff',scale:100,defVal:DEF.smudgeFalloff,getState:()=>smudgeFalloff,setState:v=>{smudgeFalloff=v;},fmt:v=>Math.round(v*100),parseVal:v=>v<=1?v:v/100});
+bindParam({rangeId:'previewSpeed',scale:100,defVal:DEF.previewSpeed,getState:()=>previewSpeed,setState:v=>{previewSpeed=v;},fmt:v=>v.toFixed(2),parseVal:v=>v>1?v/100:v});
+bindParam({rangeId:'ripplesCount',scale:1,defVal:DEF.ripplesCount,getState:()=>ripplesCount,setState:v=>{ripplesCount=v;},fmt:v=>Math.round(v),parseVal:v=>v});
+bindParam({rangeId:'ripplesIntensity',scale:100,defVal:DEF.ripplesIntensity,getState:()=>ripplesIntensity,setState:v=>{ripplesIntensity=v;},fmt:v=>Math.round(v*100),parseVal:v=>v<=1?v:v/100});
+bindParam({rangeId:'ripplesFalloff',scale:100,defVal:DEF.ripplesFalloff,getState:()=>ripplesFalloff,setState:v=>{ripplesFalloff=v;},fmt:v=>Math.round(v*100),parseVal:v=>v<=1?v:v/100});
+bindParam({rangeId:'ripplesFeather',scale:100,defVal:DEF.ripplesFeather,getState:()=>ripplesFeather,setState:v=>{ripplesFeather=v;},fmt:v=>Math.round(v*100),parseVal:v=>v<=1?v:v/100});
+const HINTS={brush:'Paint flow direction | Shift+drag: resize',smooth:'Smooth flow | Shift+drag: resize',erase:'Erase to neutral | Shift+drag: resize',noise:'Add noise to flow | Shift+drag: resize | (M) toggles mode',swirl:'Drag left=CCW, right=CW | Size from drag, then rotate | (M) toggles mode',sphere:'Drag to create radial sphere flow | (M) toggles mode',smudge:'Drag to smear flow | Shift+drag: resize',pinch:'Drag left=in, right=out | size from drag | (M) toggles mode',ripples:'Drag to create ripples flow | (M) toggles mode'};function setSubMode(mode){
+    subMode=mode;
+    document.getElementById('subModePaint').classList.toggle('active',mode==='paint');
+    document.getElementById('subModeDistort').classList.toggle('active',mode==='distort');
+    const bh=document.getElementById('brushHint');
+    bh.textContent=HINTS[currentTool]||'';
+}
+function toggleSubMode(){
+    if(!SUBMODE_TOOLS.has(currentTool))return;
+    setSubMode(subMode==='paint'?'distort':'paint');
+}function selectTool(tool){
+    if(toolDrag&&toolDrag.phase===2){fR.set(toolDrag.snapR);fG.set(toolDrag.snapG);toolDrag=null;hideSwirlRing();redraw();}
+    shiftDown=false;shiftLastMX=null;shiftLockFX=null;shiftLockFY=null;shiftLockCX=null;shiftLockCY=null;area.style.cursor='crosshair';currentTool=tool;
+    document.querySelectorAll('.tool-btn').forEach(b=>{b.classList.toggle('active',b.dataset.tool===tool);b.classList.toggle('unimplemented',!IMPLEMENTED.has(b.dataset.tool));});
+    const cfg=SECTION_CONFIG[tool];const isBrush=BRUSH_TOOLS.has(tool);
+    document.getElementById('brushSection').style.display=isBrush?'':'none';
+    if(cfg){document.getElementById('brushSectionTitle').textContent=cfg.title;document.getElementById('dirRow').style.display=cfg.dir?'':'none';document.getElementById('dirStrokeRow').style.display=cfg.stroke?'':'none';document.getElementById('brushIntensityPg').style.display=cfg.intensity?'':'none';document.getElementById('noiseExtra').style.display=cfg.noise?'':'none';document.getElementById('smudgeExtra').style.display=cfg.smudge?'':'none';}
+    document.getElementById('subModeSection').style.display=SUBMODE_TOOLS.has(tool)?'':'none';
+    if(SUBMODE_TOOLS.has(tool)){
+        setSubMode(subMode);
+    }else{
+        const bh=document.getElementById('brushHint');
+        bh.textContent=HINTS[tool]||'';
+    }
+    document.getElementById('swirlSection').style.display=tool==='swirl'?'':'none';
+    document.getElementById('sphereSection').style.display=tool==='sphere'?'':'none';
+    document.getElementById('pinchSection').style.display=tool==='pinch'?'':'none';
+    document.getElementById('ripplesSection').style.display=tool==='ripples'?'':'none';
+    const bh=document.getElementById('brushHint');bh.textContent=HINTS[tool]||'';bh.classList.remove('phase2');
+}
+document.querySelectorAll('.tool-btn').forEach(btn=>{btn.addEventListener('click',()=>selectTool(btn.dataset.tool));});
+document.getElementById('subModePaint').addEventListener('click',()=>setSubMode('paint'));
+document.getElementById('subModeDistort').addEventListener('click',()=>setSubMode('distort'));
+document.getElementById('dirFromStrokeCheck').addEventListener('change',e=>dirFromStroke=e.target.checked);
+document.getElementById('seamlessCheck').addEventListener('change',e=>{seamless=e.target.checked;});
+document.getElementById('showArrows').addEventListener('change',e=>{showArrows=e.target.checked;curX.clearRect(0,0,curC.width,curC.height);if(viewMode!=='preview')drawArrows();if(showCenterGrid)drawCenterGrid();});
+document.getElementById('blueChannelCheck').addEventListener('change',e=>{useBlueChannel=e.target.checked;redraw();});
+document.getElementById('centerGridCheck').addEventListener('change',e=>{showCenterGrid=e.target.checked;curX.clearRect(0,0,curC.width,curC.height);if(viewMode!=='preview')drawArrows();if(showCenterGrid)drawCenterGrid();});
+document.getElementById('viewModes').addEventListener('click',e=>{if(!e.target.classList.contains('vm-btn'))return;viewMode=e.target.dataset.view;document.querySelectorAll('.vm-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===viewMode));if(viewMode==='preview'){curX.clearRect(0,0,curC.width,curC.height);startGL();}else{stopGL();}redraw();});
+document.querySelectorAll('[data-csize]').forEach(btn=>{btn.addEventListener('click',()=>{const s=+btn.dataset.csize;initFlow(s,s,true);saveHist();zFit();});});
+document.getElementById('canvW').addEventListener('change',e=>{const v=evalMath(e.target.value);if(isNaN(v)||v<1){e.target.value=canvW;return;}const nw=Math.max(1,Math.min(4096,Math.round(v))),nh=canvARLocked?Math.round(nw*canvH/canvW):canvH;initFlow(nw,Math.max(1,Math.min(4096,nh)),true);saveHist();zFit();});
+document.getElementById('canvH').addEventListener('change',e=>{const v=evalMath(e.target.value);if(isNaN(v)||v<1){e.target.value=canvH;return;}const nh=Math.max(1,Math.min(4096,Math.round(v))),nw=canvARLocked?Math.round(nh*canvW/canvH):canvW;initFlow(Math.max(1,Math.min(4096,nw)),nh,true);saveHist();zFit();});
+['canvW','canvH'].forEach(id=>{const el=document.getElementById(id);el.addEventListener('keydown',e=>{if(e.key==='Enter')e.target.blur();if(e.key==='Escape'){if(el.dataset.orig!==undefined)el.value=el.dataset.orig;el.blur();}});el.addEventListener('focus',()=>{el.dataset.orig=el.value;el.select();});});
+document.getElementById('lockCanvAR').addEventListener('click',()=>{canvARLocked=!canvARLocked;document.getElementById('lockCanvAR').classList.toggle('locked',canvARLocked);});
+document.getElementById('undoBtn').addEventListener('click',undo);
+document.getElementById('redoBtn').addEventListener('click',redo);
+function syncAllUI(){const sync=[['brushSize',1,brushSize,v=>Math.round(v)],['brushIntensity',100,brushIntensity,v=>v.toFixed(2)],['brushHardness',100,brushHardness,v=>Math.round(v*100)],['noiseIntensity',100,noiseIntensity,v=>Math.round(v*100)],['noiseScale',1,noiseScale,v=>Math.round(v)],['noiseTurbulence',100,noiseTurbulence,v=>Math.round(v*100)],['swirlTurns',10,swirlTurns,v=>v.toFixed(1)],['swirlIntensity',100,swirlIntensity,v=>Math.round(v*100)],['swirlFalloff',100,swirlFalloff,v=>Math.round(v*100)],['swirlFeather',100,swirlFeather,v=>Math.round(v*100)],['sphereIntensity',100,sphereIntensity,v=>Math.round(v*100)],['sphereFalloff',100,sphereFalloff,v=>Math.round(v*100)],['sphereFeather',100,sphereFeather,v=>Math.round(v*100)],['pinchIntensity',100,pinchIntensity,v=>Math.round(v*100)],['pinchFalloff',100,pinchFalloff,v=>Math.round(v*100)],['pinchFeather',100,pinchFeather,v=>Math.round(v*100)],['pinchRotation',10,pinchRotation,v=>v.toFixed(1)],['smudgeIntensity',100,smudgeIntensity,v=>Math.round(v*100)],['smudgeLength',100,smudgeLength,v=>Math.round(v*100)],['smudgeFalloff',100,smudgeFalloff,v=>Math.round(v*100)],['previewSpeed',100,previewSpeed,v=>v.toFixed(2)],['ripplesCount',1,ripplesCount,v=>Math.round(v)],['ripplesIntensity',100,ripplesIntensity,v=>Math.round(v*100)],['ripplesFalloff',100,ripplesFalloff,v=>Math.round(v*100)],['ripplesFeather',100,ripplesFeather,v=>Math.round(v*100)]];sync.forEach(([id,sc,val,fmt])=>{const R=document.getElementById(id),V=R.closest('.pg').querySelector('.pg-val');R.value=Math.round(val*sc);V.textContent=fmt(val);});document.getElementById('seamlessCheck').checked=seamless;document.getElementById('showArrows').checked=showArrows;document.getElementById('blueChannelCheck').checked=useBlueChannel;document.getElementById('dirFromStrokeCheck').checked=dirFromStroke;document.getElementById('centerGridCheck').checked=showCenterGrid;updateDirWheel();}
+function resetSettings(){brushSize=DEF.brushSize;brushIntensity=DEF.brushIntensity/100;brushHardness=DEF.brushHardness/100;noiseIntensity=DEF.noiseIntensity/100;noiseScale=DEF.noiseScale;noiseTurbulence=DEF.noiseTurbulence/100;swirlTurns=DEF.swirlTurns;swirlIntensity=DEF.swirlIntensity/100;swirlFalloff=DEF.swirlFalloff/100;swirlFeather=DEF.swirlFeather/100;sphereIntensity=DEF.sphereIntensity/100;sphereFalloff=DEF.sphereFalloff/100;sphereFeather=DEF.sphereFeather/100;pinchIntensity=DEF.pinchIntensity/100;pinchFalloff=DEF.pinchFalloff/100;pinchFeather=DEF.pinchFeather/100;pinchRotation=DEF.pinchRotation;smudgeIntensity=DEF.smudgeIntensity/100;smudgeLength=DEF.smudgeLength/100;smudgeFalloff=DEF.smudgeFalloff/100;previewSpeed=DEF.previewSpeed/100;ripplesCount=DEF.ripplesCount;ripplesIntensity=DEF.ripplesIntensity/100;ripplesFalloff=DEF.ripplesFalloff/100;ripplesFeather=DEF.ripplesFeather/100;seamless=true;showArrows=true;useBlueChannel=false;showCenterGrid=false;dirAngle=0;dirFromStroke=true;subMode='paint';document.getElementById('subModePaint').classList.add('active');document.getElementById('subModeDistort').classList.remove('active');syncAllUI();_invalidateNoiseCache();}
+function resetCanvas(){fR.fill(.5);fG.fill(.5);redraw();saveHist();}
+function clearRef(){refImage=null;if(_refUrl){URL.revokeObjectURL(_refUrl);_refUrl=null;}document.getElementById('refThumbImg').style.display='none';document.getElementById('refThumbImg').src='';document.getElementById('refDrop').classList.remove('has-image');}
+function clearAll(){resetSettings();clearRef();initFlow(512,512,false);history=[];histIdx=-1;saveHist();updHistBtns();zFit();}
+document.getElementById('resetSettingsBtn').addEventListener('click',resetSettings);
+document.getElementById('resetCanvasBtn').addEventListener('click',resetCanvas);
+document.getElementById('clearAllBtn').addEventListener('click',clearAll);
+document.getElementById('refClear').addEventListener('click',e=>{e.stopPropagation();clearRef();});
+document.getElementById('menuBtn').addEventListener('click',e=>{e.stopPropagation();document.getElementById('menuDropdown').classList.toggle('open');});
+document.addEventListener('click',e=>{const md=document.getElementById('menuDropdown');if(!md.contains(e.target)&&e.target!==document.getElementById('menuBtn'))md.classList.remove('open');});
+document.getElementById('refDrop').addEventListener('click',e=>{if(e.target.closest('.refClear')||e.target.id==='refClear')return;document.getElementById('refInput').click();});
+document.getElementById('refDrop').addEventListener('dragover',e=>{e.preventDefault();document.getElementById('refDrop').classList.add('dragover');});
+document.getElementById('refDrop').addEventListener('dragleave',()=>document.getElementById('refDrop').classList.remove('dragover'));
+document.getElementById('refDrop').addEventListener('drop',e=>{e.preventDefault();document.getElementById('refDrop').classList.remove('dragover');const f=[...e.dataTransfer.files].find(f=>f.type.startsWith('image/'));if(f)loadRef(f);});
+document.getElementById('refInput').addEventListener('change',e=>{if(e.target.files[0])loadRef(e.target.files[0]);e.target.value='';});
+function loadRef(file){const url=URL.createObjectURL(file),img=new Image();img.onload=()=>{if(_refUrl)URL.revokeObjectURL(_refUrl);_refUrl=url;refImage=img;uploadRef(img);const ti=document.getElementById('refThumbImg');ti.src=url;ti.style.display='';document.getElementById('refDrop').classList.add('has-image');};img.src=url;}
+document.getElementById('exportBtn').addEventListener('click', exportFile);
+document.getElementById('exportFormat').addEventListener('change', updateExportLabel);
+let lastExp=null;
+function fmtB(b){return b<1024?b+' B':b<1048576?(b/1024).toFixed(1)+' KB':(b/1048576).toFixed(1)+' MB';}
+const yld=()=>new Promise(r=>setTimeout(r,0));
+function updateExportLabel(){
+    const fmt=document.getElementById('exportFormat').value;
+    const label=document.getElementById('exportLabel');
+    const estEl=document.getElementById('fileSizeEst');
+    if(label){label.textContent=fmt.toUpperCase();label.style.display='';}
+    document.getElementById('exportBtn').textContent='Export';
+    if(lastExp&&lastExp.fmt===fmt&&lastExp.w===canvW&&lastExp.h===canvH)estEl.textContent=lastExp.fname+' \u2014 '+fmtB(lastExp.bytes);else estEl.textContent='';
+}
+updateExportLabel();
+async function exportFile(){const btn=document.getElementById('exportBtn');const estEl=document.getElementById('fileSizeEst');const expLabel=document.getElementById('exportLabel');const fmt=document.getElementById('exportFormat').value;btn.textContent='Exporting...';btn.disabled=true;if(expLabel)expLabel.style.display='none';let lastReported=-1;const setP=async p=>{if(p===lastReported)return;lastReported=p;estEl.innerHTML='<span style="color:var(--accent);font-weight:500">Encoding\u2026 '+p+'%</span>';await yld();};const px=new Uint8Array(canvW*canvH*4);for(let i=0;i<canvW*canvH;i++){const r=c255(fR[i]*255),g=c255(fG[i]*255);let b=0;if(useBlueChannel){const dx=fR[i]-.5,dy=fG[i]-.5;b=c255((Math.sqrt(Math.max(0,.25-dx*dx-dy*dy))+.5)*255);}px[i*4]=r;px[i*4+1]=g;px[i*4+2]=b;px[i*4+3]=255;}try{let bytes;const base=(document.getElementById('outName').value.trim()||'T_Flowmap').replace(/[^\w\-]/g,'_');const appendSize=document.getElementById('appendSize').checked;let ext='png';let mime='image/png';await setP(5);if(fmt==='png'){bytes=await encPNG(canvW,canvH,px);await setP(95);}else if(fmt==='tga'){bytes=encTGA(canvW,canvH,px);ext='tga';mime='application/octet-stream';await setP(95);}else{bytes=await encEXR(canvW,canvH,px,async pct=>{const p=10+Math.round(pct*85);if(p-lastReported>=5)await setP(p);});ext='exr';mime='application/octet-stream';await setP(98);}const fname=(appendSize?base+'_'+canvW+'x'+canvH:base)+'.'+ext;lastExp={fmt,w:canvW,h:canvH,bytes:bytes.length,fname};const a=document.createElement('a');a.download=fname;a.href=URL.createObjectURL(new Blob([bytes],{type:mime}));a.click();URL.revokeObjectURL(a.href);estEl.textContent=fname+' \u2014 '+fmtB(bytes.length);}catch(err){alert('Export failed: '+err.message);updateExportLabel();}finally{setTimeout(()=>{btn.textContent='Export';btn.disabled=false;},400);}}
+const _ct=new Uint32Array(256);for(let i=0;i<256;i++){let c=i;for(let j=0;j<8;j++)c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1);_ct[i]=c;}
+function crc32(b){let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=_ct[(c^b[i])&0xFF]^(c>>>8);return(c^0xFFFFFFFF)>>>0;}
+async function deflateZlib(data){const cs=new CompressionStream('deflate');const w=cs.writable.getWriter();w.write(data);w.close();const r=cs.readable.getReader(),ch=[];while(true){const{value,done}=await r.read();if(done)break;ch.push(value);}const t=ch.reduce((s,c)=>s+c.length,0),out=new Uint8Array(t);let o=0;for(const c of ch){out.set(c,o);o+=c.length;}return out;}
+function pngCk(t,d){const b=new Uint8Array(4+4+d.length+4),v=new DataView(b.buffer);v.setUint32(0,d.length);b[4]=t.charCodeAt(0);b[5]=t.charCodeAt(1);b[6]=t.charCodeAt(2);b[7]=t.charCodeAt(3);b.set(d,8);v.setUint32(8+d.length,crc32(b.subarray(4,8+d.length)));return b;}
+async function encPNG(w,h,rgba){const sig=new Uint8Array([137,80,78,71,13,10,26,10]);const ih=new Uint8Array(13),v=new DataView(ih.buffer);v.setUint32(0,w);v.setUint32(4,h);v.setUint8(8,8);v.setUint8(9,6);const s=w*4,raw=new Uint8Array(h*(1+s));for(let y=0;y<h;y++){const ro=y*(1+s),rd=rgba.subarray(y*s,(y+1)*s);raw[ro]=1;for(let x=0;x<s;x++){const prev=x<4?0:rd[x-4];raw[ro+1+x]=(rd[x]-prev)&0xFF;}}const comp=await deflateZlib(raw);const pts=[sig,pngCk('IHDR',ih),pngCk('IDAT',comp),pngCk('IEND',new Uint8Array(0))],tot=pts.reduce((s,p)=>s+p.length,0),png=new Uint8Array(tot);let off=0;for(const p of pts){png.set(p,off);off+=p.length;}return png;}
+function f2h(f){const buf=new ArrayBuffer(4);new Float32Array(buf)[0]=f;const b=new Uint32Array(buf)[0],s=(b>>16)&0x8000,e=(b>>23)&0xFF,m=b&0x7FFFFF;if(e===0xFF)return s|0x7C00|(m?0x200:0);let e16=e-127+15;if(e16>=31)return s|0x7C00;if(e16<=0){if(e16<-10)return s;const mn=(m|0x800000)>>>(1-e16);return s|((mn>>>13)+((mn>>12)&1));}let m16=m>>>13;const rem=m&0x1FFF;if(rem>0x1000||(rem===0x1000&&(m16&1))){m16++;if(m16>0x3FF){m16=0;e16++;}if(e16>=31)return s|0x7C00;}return s|(e16<<10)|m16;}
+const halfLUT=new Uint16Array(256);for(let i=0;i<256;i++)halfLUT[i]=f2h(i/255);
+function encTGA(w,h,rgba){const pk=[];const tp=w*h;let i=0;while(i<tp){const bi=i*4;let rl=1;while(i+rl<tp&&rl<128){const n=(i+rl)*4;if(rgba[n]===rgba[bi]&&rgba[n+1]===rgba[bi+1]&&rgba[n+2]===rgba[bi+2]&&rgba[n+3]===rgba[bi+3])rl++;else break;}if(rl>=2){pk.push(0x80|(rl-1),rgba[bi+2],rgba[bi+1],rgba[bi],rgba[bi+3]);i+=rl;}else{let nl=1;while(i+nl<tp&&nl<128){const c=(i+nl)*4,p=(i+nl-1)*4;if(rgba[c]===rgba[p]&&rgba[c+1]===rgba[p+1]&&rgba[c+2]===rgba[p+2]&&rgba[c+3]===rgba[p+3])break;nl++;}pk.push(nl-1);for(let j=0;j<nl;j++){const px=(i+j)*4;pk.push(rgba[px+2],rgba[px+1],rgba[px],rgba[px+3]);}i+=nl;}}const rle=new Uint8Array(pk);const buf=new ArrayBuffer(18+rle.length);const v=new DataView(buf);v.setUint8(0,0);v.setUint8(1,0);v.setUint8(2,10);v.setUint16(12,w,true);v.setUint16(14,h,true);v.setUint8(16,32);v.setUint8(17,0x28);new Uint8Array(buf).set(rle,18);return new Uint8Array(buf);}
+function buildEXRHdr(w,h){const attrs=[];function attr(nm,tp,data){const nB=new TextEncoder().encode(nm+'\0'),tB=new TextEncoder().encode(tp+'\0');const sz=new Uint8Array(4);new DataView(sz.buffer).setUint32(0,data.length,true);const buf=new Uint8Array(nB.length+tB.length+4+data.length);let o=0;buf.set(nB,o);o+=nB.length;buf.set(tB,o);o+=tB.length;buf.set(sz,o);o+=4;buf.set(data,o);attrs.push({nm,buf});}const cd=[];for(const n of['A','B','G','R']){cd.push(...new TextEncoder().encode(n+'\0'));const x=new Uint8Array(16),d=new DataView(x.buffer);d.setInt32(0,1,true);d.setUint8(4,0);d.setInt32(8,1,true);d.setInt32(12,1,true);cd.push(...x);}cd.push(0);attr('channels','chlist',new Uint8Array(cd));attr('compression','compression',new Uint8Array([3]));const box=new Uint8Array(16),bv=new DataView(box.buffer);bv.setInt32(8,w-1,true);bv.setInt32(12,h-1,true);attr('dataWindow','box2i',new Uint8Array(box));attr('displayWindow','box2i',new Uint8Array(box));attr('lineOrder','lineOrder',new Uint8Array([0]));const par=new Uint8Array(4);new DataView(par.buffer).setFloat32(0,1,true);attr('pixelAspectRatio','float',par);attr('screenWindowCenter','v2f',new Uint8Array(8));const sw=new Uint8Array(4);new DataView(sw.buffer).setFloat32(0,1,true);attr('screenWindowWidth','float',sw);attrs.sort((a,b)=>a.nm<b.nm?-1:a.nm>b.nm?1:0);const t=attrs.reduce((s,a)=>s+a.buf.length,0),r=new Uint8Array(t);let o=0;for(const a of attrs){r.set(a.buf,o);o+=a.buf.length;}return r;}
+async function processEXRBlock(bi,w,h,rgba){const LPB=16;const y0=bi*LPB,y1=Math.min(y0+LPB,h),lines=y1-y0;const scanB=w*4*2;const blockB=lines*scanB;const raw=new Uint8Array(blockB);const cat=new Uint8Array(blockB);let o=0;for(let y=y0;y<y1;y++){for(const ci of[3,2,1,0])for(let x=0;x<w;x++){const v=halfLUT[rgba[(y*w+x)*4+ci]];raw[o++]=v&0xFF;raw[o++]=v>>8&0xFF;}}{let t1=0,t2=(blockB+1)>>1,i=0;while(i<blockB){cat[t1++]=raw[i++];if(i<blockB)cat[t2++]=raw[i++];}}{let p=cat[0];for(let i=1;i<blockB;i++){const d=(cat[i]-p+384)&0xFF;p=cat[i];cat[i]=d;}}return{y:y0,data:await deflateZlib(cat)};}
+async function encEXR(w,h,rgba,onProgress){const hdr=buildEXRHdr(w,h);const LPB=16;const nBlks=Math.ceil(h/LPB);const CONCURRENCY=4;const blks=new Array(nBlks);for(let bi=0;bi<nBlks;bi+=CONCURRENCY){const batchEnd=Math.min(bi+CONCURRENCY,nBlks);const promises=[];for(let j=bi;j<batchEnd;j++)promises.push(processEXRBlock(j,w,h,rgba));const results=await Promise.all(promises);for(let j=0;j<results.length;j++)blks[bi+j]=results[j];if(onProgress)await onProgress(batchEnd/nBlks);}let bLen=0;for(const b of blks)bLen+=8+b.data.length;const hdrLen=8+hdr.length+1,tblLen=nBlks*8;const total=hdrLen+tblLen+bLen;const buf=new ArrayBuffer(total),dv=new DataView(buf),by=new Uint8Array(buf);let p=0;dv.setUint32(p,20000630,true);p+=4;dv.setUint32(p,2,true);p+=4;by.set(hdr,p);p+=hdr.length;by[p++]=0;const tblS=p,blkS=tblS+tblLen;let bp=blkS;const off=[];for(let bi=0;bi<nBlks;bi++){off[bi]=bp;dv.setInt32(bp,blks[bi].y,true);bp+=4;dv.setInt32(bp,blks[bi].data.length,true);bp+=4;by.set(blks[bi].data,bp);bp+=blks[bi].data.length;}p=tblS;for(let bi=0;bi<nBlks;bi++){dv.setUint32(p,off[bi],true);p+=4;dv.setUint32(p,0,true);p+=4;}return new Uint8Array(buf);}new ResizeObserver(()=>{syncCursorCanvas();drawArrows();}).observe(area);
+initFlow(512,512,false);saveHist();updHistBtns();drawDirWheel();updateDirWheel();
+const glOk=initGL();if(glOk){uploadFlow();mainC.style.opacity='0.0';startGL();}else{viewMode='flowmap';document.querySelectorAll('.vm-btn').forEach(b=>b.classList.toggle('active',b.dataset.view==='flowmap'));redraw();}
+selectTool('brush');zFit();
+</script>
+</body>
+</html>
