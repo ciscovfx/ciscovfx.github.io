@@ -13,7 +13,7 @@ Drop a sequence of images, configure your grid, export a spritesheet. Auto-grid,
 **[Flipbook Packer](https://ciscovfx.github.io/tools/flipbook-packer/)**
 Drop a sequence of images to instantly arrange them into a spritesheet. Includes automatic grid calculation, drag-and-drop frame reordering, and per-frame scaling. Features a grid overlay preview to ensure perfect alignment for VFX particles.
 
-**[Channel Packer](https://ciscovfx.github.io/tools/flowmap-painter/)**
+**[Flowmap Painter](https://ciscovfx.github.io/tools/flowmap-painter/)**
 Paint and generate custom flow maps directly in the browser to control VFX distortion. Use directional strokes or procedural tileable noise to define flow vectors. Features multiple brush tools (swirl, pinch, ripples) and a real-time animated distortion preview using reference textures.
 
 **[Channel Packer](https://ciscovfx.github.io/tools/rgba-packer/)**
