@@ -4,12 +4,6 @@ VFX texture tools that run in your browser.
 
 ## What's here
 
-
-Pack up to 4 grayscale textures into a single RGBA image. Supports PNG, TGA, and EXR (half-float) output. Per-channel controls for luminance conversion, brightness, invert, and fill.
-
-
-Drop a sequence of images, configure your grid, export a spritesheet. Auto-grid, per-frame scaling, drag reorder. Same export formats.
-
 **[Flipbook Packer](https://ciscovfx.github.io/tools/flipbook-packer/)**
 Drop a sequence of images to instantly arrange them into a spritesheet. Includes automatic grid calculation, drag-and-drop frame reordering, and per-frame scaling. Features a grid overlay preview to ensure perfect alignment for VFX particles.
 
